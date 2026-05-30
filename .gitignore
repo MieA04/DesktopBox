@@ -1,0 +1,4 @@
+.tauri/
+node_modules/
+dist/
+target/

@@ -1,0 +1,286 @@
+/* ─── DesktopBox Global Styles ────────────────────────────── */
+/* Semi-transparent acrylic/mica compatible theme             */
+
+/* ─── CSS Variables / Theme ─── */
+:root {
+  /* Light theme (default) */
+  --bg-primary: rgba(245, 245, 245, 0.45);
+  --bg-secondary: rgba(235, 235, 235, 0.50);
+  --bg-tertiary: rgba(225, 225, 225, 0.55);
+  --text-primary: #1a1a1a;
+  --text-secondary: #555555;
+  --text-muted: #888888;
+  --border-color: rgba(0, 0, 0, 0.08);
+  --accent-color: #396cd8;
+  --accent-hover: #2b5bc7;
+  --titlebar-height: 36px;
+  --sidebar-width: 240px;
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
+  --transition-fast: 150ms ease;
+  --transition-normal: 250ms ease;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg-primary: rgba(30, 30, 30, 0.50);
+    --bg-secondary: rgba(40, 40, 40, 0.55);
+    --bg-tertiary: rgba(50, 50, 50, 0.60);
+    --text-primary: #f0f0f0;
+    --text-secondary: #aaaaaa;
+    --text-muted: #777777;
+    --border-color: rgba(255, 255, 255, 0.06);
+    --accent-color: #4f8cff;
+    --accent-hover: #6ba0ff;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
+  }
+}
+
+/* ─── Reset & Base ─── */
+*, *::before, *::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: var(--font-family);
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  background: transparent;  /* 透明背景，让亚克力效果透出 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ─── App Container ─── */
+#app {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  backdrop-filter: blur(30px) saturate(1.2);
+  -webkit-backdrop-filter: blur(30px) saturate(1.2);
+  border: 1px solid var(--border-color);
+}
+
+/* ─── Titlebar (Custom Window Drag Region) ─── */
+#titlebar {
+  height: var(--titlebar-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.drag-region {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  /* 整个标题栏都是拖动区域 */
+  -webkit-app-region: drag;
+  app-region: drag;
+}
+
+#app-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  letter-spacing: 0.3px;
+}
+
+#titlebar-controls {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  -webkit-app-region: no-drag;
+  app-region: no-drag;
+}
+
+.titlebar-btn {
+  width: 40px;
+  height: var(--titlebar-height);
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--transition-fast), color var(--transition-fast);
+}
+
+.titlebar-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.titlebar-btn#btn-close:hover {
+  background: #e81123;
+  color: white;
+}
+
+/* ─── Main Layout ─── */
+#main-layout {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+/* ─── Sidebar ─── */
+#sidebar {
+  width: var(--sidebar-width);
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  overflow-y: auto;
+}
+
+.sidebar-section {
+  padding: 12px;
+}
+
+.sidebar-section h3 {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+}
+
+#partition-list {
+  list-style: none;
+}
+
+.partition-item {
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text-secondary);
+  transition: background var(--transition-fast), color var(--transition-fast);
+  margin-bottom: 2px;
+}
+
+.partition-item:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}
+
+.partition-item.active {
+  background: var(--accent-color);
+  color: white;
+}
+
+/* ─── Monitor Panel ─── */
+#monitor-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.monitor-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 10px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+}
+
+.monitor-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.monitor-value {
+  color: var(--text-primary);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ─── Content Area ─── */
+#content {
+  flex: 1;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+/* ─── Desktop Icons View ─── */
+#desktop-view {
+  min-height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.empty-state p {
+  margin-bottom: 4px;
+}
+
+.empty-state .hint {
+  font-size: 12px;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* ─── Scrollbar Styling ─── */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(128, 128, 128, 0.2);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(128, 128, 128, 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+  ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.15);
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25);
+  }
+}
+
+/* ─── Animations ─── */
+.fade-in {
+  animation: fadeIn var(--transition-normal) ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

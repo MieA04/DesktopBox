@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /d/program/desktopBox log --oneline -5)",
+      "Bash(npm --version)",
+      "Bash(cargo --version)",
+      "Bash(rustc --version)",
+      "Bash(cargo install *)",
+      "Bash(npm ls *)",
+      "Bash(git init *)",
+      "Read(//d/program/**)",
+      "Bash(pnpm create *)",
+      "Bash(cp -r /d/program/_desktopbox_init/index.html /d/program/desktopBox/index.html)",
+      "Bash(cp -r /d/program/_desktopbox_init/package.json /d/program/desktopBox/package.json)",
+      "Bash(cp -r /d/program/_desktopbox_init/vite.config.ts /d/program/desktopBox/vite.config.ts)",
+      "Bash(cp -r /d/program/_desktopbox_init/tsconfig.json /d/program/desktopBox/tsconfig.json)",
+      "Bash(cp -r /d/program/_desktopbox_init/src /d/program/desktopBox/)",
+      "Bash(rm -rf /d/program/_desktopbox_init)",
+      "Bash(pnpm install *)",
+      "Bash(pnpm approve-builds *)",
+      "Bash(pnpm config *)",
+      "Bash(pnpm rebuild *)",
+      "Bash(cargo check *)",
+      "Bash(find ~/.cargo/registry/src -path \"*/tauri-plugin-global-shortcut*/src/lib.rs\" 2>/dev/null | head -3)",
+      "Read(//c/Users/LuVin/.cargo/registry/src/**)",
+      "Bash(npx tsc *)",
+      "Bash(pnpm build *)",
+      "Bash(cargo build *)",
+      "Bash(git add *)"
+    ],
+    "additionalDirectories": [
+      "D:\\program\\_desktopbox_init"
+    ]
+  }
+}

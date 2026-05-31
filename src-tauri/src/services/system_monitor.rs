@@ -52,6 +52,8 @@ impl AppService for SystemMonitor {
 
         let handle = thread::spawn(move || {
             let mut sys = System::new();
+            // Pre-populate process list so the first stats emission is not empty
+            sys.refresh_processes(ProcessesToUpdate::All, false);
             let mut stats_elapsed = Duration::ZERO;
             let mut process_elapsed = Duration::ZERO;
             let tick = Duration::from_millis(50);
@@ -72,10 +74,7 @@ impl AppService for SystemMonitor {
                         memory_used: sys.used_memory(),
                         memory_total: sys.total_memory(),
                         processes: sys.processes().len() as u32,
-                        uptime: SystemTime::now()
-                            .duration_since(SystemTime::UNIX_EPOCH)
-                            .unwrap_or_default()
-                            .as_secs(),
+                        uptime: System::uptime(),
                         timestamp: SystemTime::now()
                             .duration_since(SystemTime::UNIX_EPOCH)
                             .unwrap_or_default()

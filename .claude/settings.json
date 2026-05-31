@@ -63,7 +63,12 @@
       "Bash(git commit -m 'fix\\(M3\\): QA审查P1+P2修复 *)",
       "Bash(git -C \"D:\\\\program\\\\desktopBox\" log --oneline -5)",
       "Bash(git -C /d/program/desktopBox log --format='%H %s' -1 64a7588)",
-      "Bash(git commit -m 'fix\\(M3\\): PM业务验证2项偏离修复 *)"
+      "Bash(git commit -m 'fix\\(M3\\): PM业务验证2项偏离修复 *)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k in ['name','status','model']}, indent=2\\)\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(grep -o '\"text\":\"[^\"]*\\\\\\\\n# 技术方案[^\"]*\"' \"C:/Users/LuVin/.claude/projects/d--program-desktopBox/56011e65-268e-408a-b89e-084afbb63b42/subagents/workflows/wf_34e8ca04-441/agent-a480a89ea75d8be73.jsonl\")",
+      "Bash(python -c 'import json *)",
+      "Bash(cargo clean *)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

@@ -30,10 +30,8 @@ pub fn run() {
                 if let Err(e) = window.set_skip_taskbar(true) {
                     eprintln!("[DesktopBox] Warn: failed to set skip_taskbar: {e}");
                 }
-                // 不抢夺焦点（Alt+Tab 不出现）
-                if let Err(e) = window.set_focusable(false) {
-                    eprintln!("[DesktopBox] Warn: failed to set focusable: {e}");
-                }
+                // 窗口允许聚焦（M4 终端模块需要键盘输入，不可聚焦时 WebView2 无法接收键盘事件）
+                // skip_taskbar + always_on_bottom 已足够保持窗口非侵入性
                 // 程序化全屏：获取主显示器尺寸并设置窗口覆盖
                 if let Ok(Some(monitor)) = window.current_monitor() {
                     let size = monitor.size();

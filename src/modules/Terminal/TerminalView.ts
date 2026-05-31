@@ -258,9 +258,28 @@ export class TerminalView extends ModuleBase {
     });
     this.resizeObserver.observe(this.terminalContainer);
 
-    // Handle user input -> send to shell
+    // Handle user input -> local echo + send to shell
+    // NOTE: cmd.exe in pipe mode does NOT echo input, so we must echo locally
     this.terminal.onData((data: string) => {
       if (!this.sessionId) return;
+
+      // Local echo — show typed characters in the terminal immediately
+      if (this.terminal) {
+        if (data === '\r') {
+          // Enter — move to new line
+          this.terminal.write('\r\n');
+        } else if (data === '\x7f' || data === '\b') {
+          // Backspace — erase last character
+          this.terminal.write('\b \b');
+        } else if (data >= ' ' && data <= '~') {
+          // Printable ASCII — echo the character
+          this.terminal.write(data);
+        }
+        // Other control sequences (arrows, Ctrl+C, Tab) are forwarded
+        // without local echo — the shell handles them (or not)
+      }
+
+      // Forward raw keystroke to shell stdin
       api.writeStdin(this.sessionId, data).catch((err) => {
         console.warn('[Terminal] write_stdin failed:', err);
       });

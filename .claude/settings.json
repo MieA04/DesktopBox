@@ -92,7 +92,9 @@
       "Bash(cmd.exe /c \"taskkill /F /PID 12792\")",
       "Bash(powershell -Command \"Get-Process desktop-box, node, cargo, rustc -ErrorAction SilentlyContinue | Select-Object Id, ProcessName, StartTime | Format-Table -AutoSize\")",
       "Bash(powershell -Command \"Stop-Process -Id 12408 -Force\")",
-      "Bash(powershell -ExecutionPolicy Bypass -File scripts/cleanup.ps1)"
+      "Bash(powershell -ExecutionPolicy Bypass -File scripts/cleanup.ps1)",
+      "Bash(cargo run *)",
+      "Bash(./target/debug/desktop-box.exe)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

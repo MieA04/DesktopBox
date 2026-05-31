@@ -8,6 +8,72 @@ use tauri::{AppHandle, Emitter};
 
 use crate::types::messages::{ShellExitPayload, ShellOutputPayload};
 
+/// Convert bytes from the system's active code page (e.g. CP936/GBK on Chinese Windows)
+/// to a Rust String.  Falls back to UTF-8 lossy if the WinAPI call fails.
+#[cfg(windows)]
+fn decode_console_output(data: &[u8]) -> String {
+    // First try UTF-8 (covers plain ASCII and UTF-8 output)
+    if let Ok(s) = std::str::from_utf8(data) {
+        return s.to_string();
+    }
+
+    // Fallback: use Windows MultiByteToWideChar to translate from the system
+    // ANSI code page (CP_ACP = 0) to UTF-16, then re-encode as UTF-8.
+    // This correctly handles GBK/CP936, CP1252, etc.
+    extern "system" {
+        fn GetACP() -> u32;
+        fn MultiByteToWideChar(
+            CodePage: u32,
+            dwFlags: u32,
+            lpMultiByteStr: *const i8,
+            cbMultiByte: i32,
+            lpWideCharStr: *mut u16,
+            cchWideChar: i32,
+        ) -> i32;
+        fn WideCharToMultiByte(
+            CodePage: u32,
+            dwFlags: u32,
+            lpWideCharStr: *const u16,
+            cchWideChar: i32,
+            lpMultiByteStr: *mut i8,
+            cbMultiByte: i32,
+            lpDefaultChar: *const i8,
+            lpUsedDefaultChar: *mut i32,
+        ) -> i32;
+    }
+
+    let cp = unsafe { GetACP() };
+    // CP_ACP == 0 means the system ANSI code page
+    let wide_len = unsafe {
+        MultiByteToWideChar(cp, 0, data.as_ptr() as *const i8, data.len() as i32, std::ptr::null_mut(), 0)
+    };
+    if wide_len <= 0 {
+        return String::from_utf8_lossy(data).to_string();
+    }
+    let mut wide = vec![0u16; wide_len as usize];
+    unsafe {
+        MultiByteToWideChar(cp, 0, data.as_ptr() as *const i8, data.len() as i32, wide.as_mut_ptr(), wide_len);
+    }
+
+    // Convert UTF-16 → UTF-8 (CP_UTF8 == 65001)
+    let utf8_len = unsafe {
+        WideCharToMultiByte(65001, 0, wide.as_ptr(), wide_len, std::ptr::null_mut(), 0, std::ptr::null(), std::ptr::null_mut())
+    };
+    if utf8_len <= 0 {
+        return String::from_utf8_lossy(data).to_string();
+    }
+    let mut utf8_buf = vec![0u8; utf8_len as usize];
+    unsafe {
+        WideCharToMultiByte(65001, 0, wide.as_ptr(), wide_len, utf8_buf.as_mut_ptr() as *mut i8, utf8_len, std::ptr::null(), std::ptr::null_mut());
+    }
+    String::from_utf8_lossy(&utf8_buf).to_string()
+}
+
+#[cfg(not(windows))]
+fn decode_console_output(data: &[u8]) -> String {
+    String::from_utf8_lossy(data).to_string()
+}
+
 /// A single shell session wrapping a Windows cmd.exe subprocess.
 pub struct ShellSession {
     pub stdin: ChildStdin,
@@ -50,13 +116,9 @@ impl ShellManager {
         let session_id = generate_session_id();
         let child_pid = child.id();
 
-        let mut stdin = child.stdin.take().ok_or("Failed to open stdin")?;
+        let stdin = child.stdin.take().ok_or("Failed to open stdin")?;
         let stdout = child.stdout.take().ok_or("Failed to open stdout")?;
         let stderr = child.stderr.take().ok_or("Failed to open stderr")?;
-
-        // 将 cmd.exe 代码页切换为 UTF-8，避免中文系统 CP936(GBK) 导致终端乱码
-        let _ = stdin.write_all(b"chcp 65001>nul\r\n");
-        let _ = stdin.flush();
 
         let session = ShellSession {
             stdin,
@@ -79,7 +141,7 @@ impl ShellManager {
                     match reader.read(&mut buf) {
                         Ok(0) => break, // EOF
                         Ok(n) => {
-                            let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                            let data = decode_console_output(&buf[..n]);
                             let payload = ShellOutputPayload {
                                 session_id: sid_stdout.clone(),
                                 data,
@@ -101,7 +163,7 @@ impl ShellManager {
                     match reader.read(&mut buf) {
                         Ok(0) => break, // EOF
                         Ok(n) => {
-                            let data = String::from_utf8_lossy(&buf[..n]).to_string();
+                            let data = decode_console_output(&buf[..n]);
                             let payload = ShellOutputPayload {
                                 session_id: sid_stderr.clone(),
                                 data,

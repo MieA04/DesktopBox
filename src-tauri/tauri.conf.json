@@ -20,7 +20,7 @@
         "resizable": true,
         "transparent": true,
         "decorations": false,
-        "focusable": false
+        "focusable": true
       }
     ],
     "security": {

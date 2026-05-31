@@ -10,7 +10,6 @@ use crate::types::messages::{ShellExitPayload, ShellOutputPayload};
 
 /// A single shell session wrapping a Windows cmd.exe subprocess.
 pub struct ShellSession {
-    pub session_id: String,
     pub stdin: ChildStdin,
     pub child_pid: u32,
 }
@@ -56,7 +55,6 @@ impl ShellManager {
         let stderr = child.stderr.take().ok_or("Failed to open stderr")?;
 
         let session = ShellSession {
-            session_id: session_id.clone(),
             stdin,
             child_pid,
         };

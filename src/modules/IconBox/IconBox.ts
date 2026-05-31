@@ -1,5 +1,5 @@
 import { ModuleBase } from '../../core/ModuleBase';
-import { ResizeStrategy, dragEngine } from '../../core/DragEngine';
+import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
 import { persistence, STORAGE_KEYS } from '../../core/Persistence';
 import { api, events, FileEntry, DesktopChangePayload } from '../../utils/tauriApi';
@@ -16,12 +16,6 @@ const ICON_BOX = {
   MIRROR_SCALE: '1.1',
   PLACEHOLDER_OPACITY: '0.3',
 } as const;
-
-interface BoundHandler {
-  el: EventTarget;
-  type: string;
-  handler: EventListener;
-}
 
 /** Active drag-reorder session state */
 interface DragReorderState {
@@ -40,7 +34,6 @@ interface DragReorderState {
 export class IconBox extends ModuleBase {
   private iconCache: Map<string, HTMLElement> = new Map();
   private grid: HTMLElement | null = null;
-  private boundHandlers: BoundHandler[] = [];
   private unlistenDesktopFiles: (() => void) | null = null;
   /** 存储 listen() 返回的 Promise，防止 destroy() 与 Promise resolve 竞态（R5） */
   private unlistenDesktopFilesPromise: Promise<() => void> | null = null;
@@ -113,11 +106,8 @@ export class IconBox extends ModuleBase {
       this.resizeObserver = null;
     }
 
-    // Clean up all registered event listeners
-    this.boundHandlers.forEach(({ el, type, handler }) => {
-      el.removeEventListener(type, handler);
-    });
-    this.boundHandlers = [];
+    // Clean up all registered event listeners via base class
+    this.cleanupHandlers();
 
     // 清空 grid 以移除 icon-item 上的事件监听器（R4: DOM 节点移除时监听器自动 GC）
     if (this.grid) {
@@ -393,50 +383,6 @@ export class IconBox extends ModuleBase {
   }
 
   // ── Existing methods (with M2b modifications) ──
-
-  private createTitleBar(): void {
-    this.titleBar = document.createElement('div');
-    this.titleBar.className = 'module-titlebar';
-
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'module-title';
-    titleSpan.textContent = this.title;
-
-    this.titleBar.appendChild(titleSpan);
-    this.container.insertBefore(this.titleBar, this.contentArea);
-  }
-
-  private createResizeHandle(): void {
-    this.resizeHandle = document.createElement('div');
-    this.resizeHandle.className = 'resize-handle';
-    this.container.appendChild(this.resizeHandle);
-
-    // Attach resize strategy
-    const onResizeStart = (e: PointerEvent) => {
-      e.stopPropagation();
-      const engine = dragEngine;
-      const prevStrategy = engine.getCurrentStrategy();
-      const resizeStrategy = new ResizeStrategy();
-      engine.setStrategy(resizeStrategy);
-      resizeStrategy.onStart(e, this);
-      engine.setActiveModule(this);
-
-      const onMove = (ev: PointerEvent) => resizeStrategy.onMove(ev, this);
-      const onUp = (ev: PointerEvent) => {
-        resizeStrategy.onEnd(ev, this);
-        engine.setActiveModule(null);
-        engine.setStrategy(prevStrategy);
-        document.removeEventListener('pointermove', onMove);
-        document.removeEventListener('pointerup', onUp);
-      };
-      document.addEventListener('pointermove', onMove);
-      document.addEventListener('pointerup', onUp);
-    };
-
-    // 追踪 resizeHandle 监听器以便清理（R4）
-    this.boundHandlers.push({ el: this.resizeHandle, type: 'pointerdown', handler: onResizeStart as EventListener });
-    this.resizeHandle.addEventListener('pointerdown', onResizeStart);
-  }
 
   private listenDesktopFiles(): void {
     const unlisten = events.onDesktopFiles((payload: DesktopChangePayload) => {

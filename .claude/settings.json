@@ -50,7 +50,14 @@
       "Bash(git commit -m 'fix: 移除死代码消除 Rust 编译警告 *)",
       "Bash(git -C \"D:/program/desktopBox/.claude/worktrees/agent-a56ea3d6eddf04ce3/\" rev-parse --show-toplevel)",
       "Bash(cargo clippy *)",
-      "Bash(git commit -m 'fix: QA复审问题修复 *)"
+      "Bash(git commit -m 'fix: QA复审问题修复 *)",
+      "Bash(git show *)",
+      "Bash(dir /b \"d:\\\\program\\\\desktopBox\\\\*.md\")",
+      "Bash(findstr /i \"m3\\\\|plan\\\\|任务\\\\|task\\\\|schedule\")",
+      "Bash(find ~/.claude/projects -path \"*/d--program-desktopBox/*\" -name \"*.json\" -o -path \"*/d--program-desktopBox/*\" -name \"*.md\" 2>/dev/null | head -20)",
+      "Read(//c/Users/LuVin/.claude/projects/**)",
+      "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k in ['name','status','model','conversation_id']}, indent=2\\)\\)\")",
+      "Bash(git commit -m 'feat\\(M3\\): T1 Rust基础设施 + T2 ModuleBase重构 *)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

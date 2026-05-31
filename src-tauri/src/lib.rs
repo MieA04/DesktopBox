@@ -6,24 +6,10 @@ use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Manager, PhysicalSize, PhysicalPosition};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
-use tauri_plugin_store::StoreExt;
 
-use crate::services::file_poller::{AppService, FilePoller};
-
-#[tauri::command]
-fn get_window_downgrade(app: tauri::AppHandle) -> Result<bool, String> {
-    let store = app.store("settings.json").map_err(|e| e.to_string())?;
-    let val = store.get("window_downgrade");
-    Ok(val.and_then(|v| v.as_bool()).unwrap_or(false))
-}
-
-#[tauri::command]
-fn set_window_downgrade(app: tauri::AppHandle, downgrade: bool) -> Result<(), String> {
-    let store = app.store("settings.json").map_err(|e| e.to_string())?;
-    store.set("window_downgrade", serde_json::json!(downgrade));
-    store.save().map_err(|e| e.to_string())?;
-    Ok(())
-}
+use crate::services::file_poller::FilePoller;
+use crate::services::system_monitor::SystemMonitor;
+use crate::services::AppService;
 
 pub fn run() {
     tauri::Builder::default()
@@ -87,14 +73,23 @@ pub fn run() {
             }
             app.manage(Mutex::new(poller));
 
+            // ── SystemMonitor: 系统数据采集 ──
+            // 通过 app.manage() 托管，应用退出时自动 Drop → 停止采集线程
+            let mut monitor = SystemMonitor::new(app.handle().clone());
+            if let Err(e) = monitor.start() {
+                eprintln!("[DesktopBox] SystemMonitor failed to start: {e}");
+            }
+            app.manage(Mutex::new(monitor));
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
             commands::window::toggle_modules_visibility,
+            commands::window::get_window_downgrade,
+            commands::window::set_window_downgrade,
             commands::desktop::open_file,
             commands::desktop::get_desktop_files,
-            get_window_downgrade,
-            set_window_downgrade,
+            commands::system::get_system_stats,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

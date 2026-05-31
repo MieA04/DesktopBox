@@ -1,4 +1,5 @@
 import { ModuleState } from './StateManager';
+import { dragEngine, ResizeStrategy } from './DragEngine';
 
 export interface Position {
   x: number;
@@ -12,14 +13,21 @@ export interface Size {
 
 export type DockState = 'none' | 'left' | 'right' | 'top' | 'bottom';
 
+export interface BoundHandler {
+  el: EventTarget;
+  type: string;
+  handler: EventListener;
+}
+
 export abstract class ModuleBase {
   readonly id: string;
   readonly title: string;
   readonly container: HTMLElement;
   protected contentArea: HTMLElement;
   protected state: ModuleState;
-  protected titleBar?: HTMLElement;
-  protected resizeHandle?: HTMLElement;
+  protected titleBar: HTMLElement | null = null;
+  protected resizeHandle: HTMLElement | null = null;
+  protected boundHandlers: BoundHandler[] = [];
   private preSnapSize?: Size;
 
   constructor(id: string, title: string, defaultState: Partial<Omit<ModuleState, 'id' | 'title'>>) {
@@ -126,6 +134,66 @@ export abstract class ModuleBase {
   // ── Getters ──
 
   getState(): ModuleState { return { ...this.state }; }
+
+  // ── Title Bar ──
+
+  protected createTitleBar(): void {
+    if (this.titleBar) return;
+    this.titleBar = document.createElement('div');
+    this.titleBar.className = 'module-titlebar';
+
+    const titleSpan = document.createElement('span');
+    titleSpan.className = 'module-title';
+    titleSpan.textContent = this.title;
+
+    this.titleBar.appendChild(titleSpan);
+    this.container.insertBefore(this.titleBar, this.contentArea);
+  }
+
+  // ── Resize Handle ──
+
+  protected createResizeHandle(): void {
+    if (this.resizeHandle) return;
+    this.resizeHandle = document.createElement('div');
+    this.resizeHandle.className = 'resize-handle';
+    this.container.appendChild(this.resizeHandle);
+
+    const onResizeStart = (e: PointerEvent) => {
+      e.stopPropagation();
+      const engine = dragEngine;
+      const prevStrategy = engine.getCurrentStrategy();
+      const resizeStrategy = new ResizeStrategy();
+      engine.setStrategy(resizeStrategy);
+      resizeStrategy.onStart(e, this);
+      engine.setActiveModule(this);
+
+      const onMove = (ev: PointerEvent) => resizeStrategy.onMove(ev, this);
+      const onUp = (ev: PointerEvent) => {
+        resizeStrategy.onEnd(ev, this);
+        engine.setActiveModule(null);
+        engine.setStrategy(prevStrategy);
+        document.removeEventListener('pointermove', onMove);
+        document.removeEventListener('pointerup', onUp);
+      };
+      document.addEventListener('pointermove', onMove);
+      document.addEventListener('pointerup', onUp);
+
+      this.boundHandlers.push({ el: document, type: 'pointermove', handler: onMove as EventListener });
+      this.boundHandlers.push({ el: document, type: 'pointerup', handler: onUp as EventListener });
+    };
+
+    this.resizeHandle.addEventListener('pointerdown', onResizeStart);
+    this.boundHandlers.push({ el: this.resizeHandle, type: 'pointerdown', handler: onResizeStart as EventListener });
+  }
+
+  // ── Handler Cleanup ──
+
+  protected cleanupHandlers(): void {
+    this.boundHandlers.forEach(({ el, type, handler }) => {
+      el.removeEventListener(type, handler);
+    });
+    this.boundHandlers = [];
+  }
 
   // ── Internal ──
 

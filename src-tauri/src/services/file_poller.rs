@@ -7,12 +7,8 @@ use std::time::{Duration, SystemTime};
 
 use tauri::{AppHandle, Emitter};
 
+use crate::services::AppService;
 use crate::types::messages::{DesktopChangePayload, FileEntry};
-
-/// Trait for app services managed by the Tauri setup lifecycle.
-pub trait AppService {
-    fn start(&mut self) -> Result<(), String>;
-}
 
 /// Periodically polls the Windows desktop directory and emits file-change events.
 pub struct FilePoller {
@@ -130,6 +126,20 @@ impl AppService for FilePoller {
         Ok(())
     }
 
+    fn stop(&mut self) -> Result<(), String> {
+        if !self.running.load(Ordering::SeqCst) {
+            return Err("FilePoller is not running".to_string());
+        }
+        self.running.store(false, Ordering::SeqCst);
+        if let Some(handle) = self.thread_handle.take() {
+            let _ = handle.join();
+        }
+        Ok(())
+    }
+
+    fn is_running(&self) -> bool {
+        self.running.load(Ordering::SeqCst)
+    }
 }
 
 // ── Helpers ──

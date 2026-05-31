@@ -16,3 +16,22 @@ pub struct DesktopChangePayload {
     pub is_full: bool,  // true for initial full sync
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct SystemStats {
+    pub cpu_usage: f32,
+    pub gpu_usage: Option<f32>,
+    pub memory_used: u64,
+    pub memory_total: u64,
+    pub processes: u32,
+    pub uptime: u64,
+    pub timestamp: u64,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ProcessInfo {
+    pub pid: u32,
+    pub name: String,
+    pub cpu_usage: f32,
+    pub memory_usage: u64,
+}
+

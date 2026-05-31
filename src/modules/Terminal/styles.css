@@ -1,0 +1,9 @@
+/* Terminal module — Task 1 skeleton */
+.terminal-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #888;
+  font-size: 14px;
+}

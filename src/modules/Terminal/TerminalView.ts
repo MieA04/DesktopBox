@@ -79,6 +79,9 @@ export class TerminalView extends ModuleBase {
   // Settings panel (shared component + terminal extras)
   private settingsPanel: SettingsPanel | null = null;
 
+  // Input line buffer — accumulate characters until Enter, then check for local commands
+  private inputBuffer = '';
+
   constructor() {
     super('terminal', '终端', {
       position: { x: 100, y: 400 },
@@ -258,31 +261,44 @@ export class TerminalView extends ModuleBase {
     });
     this.resizeObserver.observe(this.terminalContainer);
 
-    // Handle user input -> local echo + send to shell
+    // Handle user input -> local echo + line buffering + command interception
     // NOTE: cmd.exe in pipe mode does NOT echo input, so we must echo locally
     this.terminal.onData((data: string) => {
       if (!this.sessionId) return;
 
-      // Local echo — show typed characters in the terminal immediately
-      if (this.terminal) {
-        if (data === '\r') {
-          // Enter — move to new line
-          this.terminal.write('\r\n');
-        } else if (data === '\x7f' || data === '\b') {
-          // Backspace — erase last character
-          this.terminal.write('\b \b');
-        } else if (data >= ' ' && data <= '~') {
-          // Printable ASCII — echo the character
-          this.terminal.write(data);
-        }
-        // Other control sequences (arrows, Ctrl+C, Tab) are forwarded
-        // without local echo — the shell handles them (or not)
-      }
+      if (data === '\r') {
+        // Enter — newline in terminal
+        if (this.terminal) this.terminal.write('\r\n');
+        const line = this.inputBuffer;
+        this.inputBuffer = '';
 
-      // Forward raw keystroke to shell stdin
-      api.writeStdin(this.sessionId, data).catch((err) => {
-        console.warn('[Terminal] write_stdin failed:', err);
-      });
+        // Check for local commands before forwarding to cmd.exe
+        if (line && this.handleLocalCommand(line)) {
+          return; // consumed locally
+        }
+
+        // Forward the completed line to shell
+        if (line) {
+          api.writeStdin(this.sessionId, line + '\r').catch((err) => {
+            console.warn('[Terminal] write_stdin failed:', err);
+          });
+        }
+      } else if (data === '\x7f' || data === '\b') {
+        // Backspace — erase last character from buffer and terminal
+        if (this.inputBuffer.length > 0) {
+          this.inputBuffer = this.inputBuffer.slice(0, -1);
+          if (this.terminal) this.terminal.write('\b \b');
+        }
+      } else if (data >= ' ' && data <= '~') {
+        // Printable ASCII — echo + buffer, do NOT forward yet
+        if (this.terminal) this.terminal.write(data);
+        this.inputBuffer += data;
+      } else {
+        // Control sequences (arrows, Ctrl+C, Tab) — forward raw
+        api.writeStdin(this.sessionId, data).catch((err) => {
+          console.warn('[Terminal] write_stdin failed:', err);
+        });
+      }
     });
   }
 
@@ -392,5 +408,46 @@ export class TerminalView extends ModuleBase {
     api.killShell(sid).catch((err) => {
       console.warn('[Terminal] kill_shell failed:', err);
     });
+  }
+
+  /** Intercept known commands locally; return true if consumed. */
+  private handleLocalCommand(cmd: string): boolean {
+    switch (cmd) {
+      case 'help':
+        this.showHelp();
+        return true;
+      case 'clear':
+        this.terminal?.clear();
+        return true;
+      case 'ls':
+        // cmd.exe does not support ls — redirect to dir
+        if (this.sessionId) {
+          api.writeStdin(this.sessionId, 'dir\r').catch((err) => {
+            console.warn('[Terminal] write_stdin (ls→dir) failed:', err);
+          });
+        }
+        return true;
+      default:
+        return false;
+    }
+  }
+
+  /** Print the help command table to the terminal. */
+  private showHelp(): void {
+    if (!this.terminal) return;
+    this.terminal.write(
+      [
+        '',
+        '\x1b[36mDesktopBox 终端帮助\x1b[0m',
+        '═══════════════════════════',
+        '',
+        '  \x1b[32mhelp\x1b[0m   显示本帮助信息',
+        '  \x1b[32mclear\x1b[0m  清屏',
+        '  \x1b[32mls\x1b[0m     查看目录文件 (映射为 dir 命令)',
+        '',
+        '═══════════════════════════',
+        '',
+      ].join('\r\n') + '\r\n',
+    );
   }
 }

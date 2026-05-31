@@ -57,7 +57,10 @@
       "Bash(find ~/.claude/projects -path \"*/d--program-desktopBox/*\" -name \"*.json\" -o -path \"*/d--program-desktopBox/*\" -name \"*.md\" 2>/dev/null | head -20)",
       "Read(//c/Users/LuVin/.claude/projects/**)",
       "Bash(python -c \"import json,sys; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:v for k,v in d.items\\(\\) if k in ['name','status','model','conversation_id']}, indent=2\\)\\)\")",
-      "Bash(git commit -m 'feat\\(M3\\): T1 Rust基础设施 + T2 ModuleBase重构 *)"
+      "Bash(git commit -m 'feat\\(M3\\): T1 Rust基础设施 + T2 ModuleBase重构 *)",
+      "Bash(npx eslint *)",
+      "Bash(git checkout *)",
+      "Bash(git commit -m 'fix\\(M3\\): QA审查P1+P2修复 *)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

@@ -63,11 +63,11 @@ export class ProcessTable extends ModuleBase {
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
 
     // Double-click titlebar to un-dock
-    const onDblClick = ((() => {
+    const onDblClick = (() => {
       if (this.getState().dock !== 'none') {
         this.setDock('none');
       }
-    }) as EventListener);
+    }) as EventListener;
     this.titleBar?.addEventListener('dblclick', onDblClick);
     if (this.titleBar) {
       this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
@@ -112,7 +112,7 @@ export class ProcessTable extends ModuleBase {
       this.unlistenProcesses();
       this.unlistenProcesses = null;
     } else if (this.unlistenProcessesPromise) {
-      this.unlistenProcessesPromise.then(fn => fn()).catch(() => {});
+      this.unlistenProcessesPromise.then((fn) => fn()).catch(() => {});
     }
 
     // Clean up all registered DOM event listeners
@@ -135,7 +135,7 @@ export class ProcessTable extends ModuleBase {
     this.headerRow = document.createElement('tr');
     this.headerRow.className = 'process-header';
 
-    COLUMNS.forEach(col => {
+    COLUMNS.forEach((col) => {
       const th = document.createElement('th');
       th.dataset.col = col.key;
       th.textContent = col.label;
@@ -162,8 +162,11 @@ export class ProcessTable extends ModuleBase {
     });
     if (unlisten && typeof unlisten.then === 'function') {
       this.unlistenProcessesPromise = unlisten;
-      unlisten.then(fn => { this.unlistenProcesses = fn; })
-        .catch(err => {
+      unlisten
+        .then((fn) => {
+          this.unlistenProcesses = fn;
+        })
+        .catch((err) => {
           console.warn('[ProcessTable] Failed to listen system:processes:', err);
         });
     }
@@ -183,7 +186,7 @@ export class ProcessTable extends ModuleBase {
   private updateHeaderIndicators(): void {
     if (!this.headerRow) return;
     const headers = this.headerRow.querySelectorAll<HTMLElement>('th');
-    headers.forEach(th => {
+    headers.forEach((th) => {
       const col = th.dataset.col;
       th.classList.remove('sorted-asc', 'sorted-desc');
       th.removeAttribute('data-arrow');
@@ -199,7 +202,7 @@ export class ProcessTable extends ModuleBase {
     if (!this.tbody) return;
     this.tbody.innerHTML = '';
 
-    processes.forEach(proc => {
+    processes.forEach((proc) => {
       const row = document.createElement('tr');
       row.className = 'process-row';
 

@@ -41,7 +41,7 @@ class AppState {
   sortDirection = signal<'asc' | 'desc'>('asc');
 
   activeModule: ReadonlySignal<ModuleState | undefined> = computed(() =>
-    this.modules.value.find(m => m.id === this.activeModuleId.value),
+    this.modules.value.find((m) => m.id === this.activeModuleId.value),
   );
 
   // M3: Filtered and sorted process list (reactive)
@@ -50,7 +50,7 @@ class AppState {
     // Search filter
     const q = this.searchQuery.value.toLowerCase();
     if (q) {
-      list = list.filter(p => p.name.toLowerCase().includes(q));
+      list = list.filter((p) => p.name.toLowerCase().includes(q));
     }
     // Sort
     const col = this.sortColumn.value;
@@ -59,10 +59,18 @@ class AppState {
       list = [...list].sort((a, b) => {
         let cmp = 0;
         switch (col) {
-          case 'name': cmp = a.name.localeCompare(b.name); break;
-          case 'pid': cmp = a.pid - b.pid; break;
-          case 'cpu': cmp = a.cpu_usage - b.cpu_usage; break;
-          case 'memory': cmp = a.memory_usage - b.memory_usage; break;
+          case 'name':
+            cmp = a.name.localeCompare(b.name);
+            break;
+          case 'pid':
+            cmp = a.pid - b.pid;
+            break;
+          case 'cpu':
+            cmp = a.cpu_usage - b.cpu_usage;
+            break;
+          case 'memory':
+            cmp = a.memory_usage - b.memory_usage;
+            break;
         }
         return dir === 'asc' ? cmp : -cmp;
       });
@@ -71,9 +79,7 @@ class AppState {
   });
 
   updateModuleState(id: string, partial: Partial<ModuleState>): void {
-    this.modules.value = this.modules.value.map(m =>
-      m.id === id ? { ...m, ...partial } : m,
-    );
+    this.modules.value = this.modules.value.map((m) => (m.id === id ? { ...m, ...partial } : m));
   }
 
   setActiveModule(id: string | null): void {

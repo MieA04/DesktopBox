@@ -8,11 +8,15 @@ import { MetricCard } from './MetricCard';
 import './styles.css';
 
 /** Format memory bytes to human-readable string (GB / MB) */
-function formatMemory(bytes: number): string {
-  if (bytes >= 1024 * 1024 * 1024) {
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2);
-  }
-  return (bytes / (1024 * 1024)).toFixed(1);
+function formatMemory(used: number, total: number): { used: string; total: string; unit: string } {
+  const isGB = total >= 1024 * 1024 * 1024;
+  const divisor = isGB ? 1024 * 1024 * 1024 : 1024 * 1024;
+  const unit = isGB ? 'GB' : 'MB';
+  return {
+    used: (used / divisor).toFixed(isGB ? 2 : 1),
+    total: (total / divisor).toFixed(isGB ? 2 : 1),
+    unit,
+  };
 }
 
 /** Format uptime seconds to HH:MM:SS */
@@ -20,7 +24,7 @@ function formatTime(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);
   const s = totalSeconds % 60;
-  return [h, m, s].map(v => String(v).padStart(2, '0')).join(':');
+  return [h, m, s].map((v) => String(v).padStart(2, '0')).join(':');
 }
 
 export class MonitorPanel extends ModuleBase {
@@ -62,11 +66,11 @@ export class MonitorPanel extends ModuleBase {
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
 
     // Double-click titlebar to un-dock
-    const onDblClick = ((() => {
+    const onDblClick = (() => {
       if (this.getState().dock !== 'none') {
         this.setDock('none');
       }
-    }) as EventListener);
+    }) as EventListener;
     this.titleBar?.addEventListener('dblclick', onDblClick);
     if (this.titleBar) {
       this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
@@ -119,7 +123,7 @@ export class MonitorPanel extends ModuleBase {
       this.unlistenStats();
       this.unlistenStats = null;
     } else if (this.unlistenStatsPromise) {
-      this.unlistenStatsPromise.then(fn => fn()).catch(() => {});
+      this.unlistenStatsPromise.then((fn) => fn()).catch(() => {});
     }
 
     // Clean up all registered DOM event listeners
@@ -145,8 +149,11 @@ export class MonitorPanel extends ModuleBase {
     });
     if (unlisten && typeof unlisten.then === 'function') {
       this.unlistenStatsPromise = unlisten;
-      unlisten.then(fn => { this.unlistenStats = fn; })
-        .catch(err => {
+      unlisten
+        .then((fn) => {
+          this.unlistenStats = fn;
+        })
+        .catch((err) => {
           console.warn('[MonitorPanel] Failed to listen system:stats:', err);
         });
     }
@@ -164,14 +171,14 @@ export class MonitorPanel extends ModuleBase {
     }
 
     // Memory card
-    const used = formatMemory(stats.memory_used);
-    const total = formatMemory(stats.memory_total);
-    const memUnit = stats.memory_total >= 1024 * 1024 * 1024 ? 'GB' : 'MB';
-    this.memoryCard?.setValue(`${used} / ${total} ${memUnit}`);
+    const { used, total, unit } = formatMemory(stats.memory_used, stats.memory_total);
+    this.memoryCard?.setValue(`${used} / ${total} ${unit}`);
   }
 
   private updateTimeCard(): void {
     const now = new Date();
-    this.timeCard?.setValue(formatTime(now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()));
+    this.timeCard?.setValue(
+      formatTime(now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()),
+    );
   }
 }

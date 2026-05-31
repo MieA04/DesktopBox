@@ -133,7 +133,9 @@ export abstract class ModuleBase {
 
   // ── Getters ──
 
-  getState(): ModuleState { return { ...this.state }; }
+  getState(): ModuleState {
+    return { ...this.state };
+  }
 
   // ── Settings Hook ──
 
@@ -200,12 +202,20 @@ export abstract class ModuleBase {
       document.addEventListener('pointermove', onMove);
       document.addEventListener('pointerup', onUp);
 
-      this.boundHandlers.push({ el: document, type: 'pointermove', handler: onMove as EventListener });
+      this.boundHandlers.push({
+        el: document,
+        type: 'pointermove',
+        handler: onMove as EventListener,
+      });
       this.boundHandlers.push({ el: document, type: 'pointerup', handler: onUp as EventListener });
     };
 
     this.resizeHandle.addEventListener('pointerdown', onResizeStart);
-    this.boundHandlers.push({ el: this.resizeHandle, type: 'pointerdown', handler: onResizeStart as EventListener });
+    this.boundHandlers.push({
+      el: this.resizeHandle,
+      type: 'pointerdown',
+      handler: onResizeStart as EventListener,
+    });
   }
 
   // ── Handler Cleanup ──

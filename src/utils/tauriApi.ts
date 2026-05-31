@@ -40,8 +40,7 @@ export const api = {
   // Window control [REQ-SYS]
   toggleModulesVisibility: () => invoke<void>('toggle_modules_visibility'),
   getWindowDowngrade: () => invoke<boolean>('get_window_downgrade'),
-  setWindowDowngrade: (downgrade: boolean) =>
-    invoke<void>('set_window_downgrade', { downgrade }),
+  setWindowDowngrade: (downgrade: boolean) => invoke<void>('set_window_downgrade', { downgrade }),
 
   // M2a: Desktop file operations
   getDesktopFiles: () => invoke<FileEntry[]>('get_desktop_files'),
@@ -53,13 +52,13 @@ export const api = {
 export const events = {
   // M2a: Listen for real-time desktop file changes from FilePoller
   onDesktopFiles: (cb: (payload: DesktopChangePayload) => void) =>
-    listen<DesktopChangePayload>('desktop:files', e => cb(e.payload)),
+    listen<DesktopChangePayload>('desktop:files', (e) => cb(e.payload)),
 
   // M3: System resource monitoring
   onSystemStats: (cb: (stats: SystemStats) => void) =>
-    listen<SystemStats>('system:stats', e => cb(e.payload)),
+    listen<SystemStats>('system:stats', (e) => cb(e.payload)),
 
   // M3: Process list
   onProcessList: (cb: (processes: ProcessInfo[]) => void) =>
-    listen<ProcessInfo[]>('system:processes', e => cb(e.payload)),
+    listen<ProcessInfo[]>('system:processes', (e) => cb(e.payload)),
 };

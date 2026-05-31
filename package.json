@@ -7,7 +7,9 @@
     "dev": "vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "cleanup": "powershell -ExecutionPolicy Bypass -File scripts/cleanup.ps1",
+    "dev:clean": "powershell -ExecutionPolicy Bypass -File scripts/cleanup.ps1 && pnpm tauri dev"
   },
   "dependencies": {
     "@preact/signals": "^2",

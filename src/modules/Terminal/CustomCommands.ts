@@ -2,7 +2,7 @@
  * CustomCommands — 模块底部横向按钮组
  *
  * 从 Persistence 加载 custom-commands 配置（JSON 列表 [{ label, command }]），
- * 点击按钮调用 write_stdin(command + '\r')。
+ * 点击按钮调用 write_stdin(command + '\r\n')。
  */
 import { api } from '../../utils/tauriApi';
 import { persistence, STORAGE_KEYS } from '../../core/Persistence';
@@ -55,9 +55,10 @@ export class CustomCommands {
       btn.addEventListener('click', () => {
         const sid = this.terminalView.getSessionId();
         if (sid) {
-          api.writeStdin(sid, cmd.command + '\r').catch((err) => {
+          api.writeStdin(sid, cmd.command + '\r\n').catch((err) => {
             console.warn('[CustomCommands] write_stdin failed:', err);
           });
+          this.terminalView.schedulePrompt();
         }
       });
       this.el.appendChild(btn);

@@ -5,7 +5,7 @@ import '@xterm/xterm/css/xterm.css';
 import { ModuleBase } from '../../core/ModuleBase';
 import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
-import { api, events } from '../../utils/tauriApi';
+import { api, events, ShellOutputPayload } from '../../utils/tauriApi';
 import { Slider } from '../../components/Slider';
 import { SettingsPanel } from '../../components/SettingsPanel';
 import { CustomCommands } from './CustomCommands';
@@ -82,6 +82,11 @@ export class TerminalView extends ModuleBase {
   // Input line buffer — accumulate characters until Enter, then check for local commands
   private inputBuffer = '';
 
+  // Buffer events arriving before sessionId is set (race window protection)
+  private outputBuffer: ShellOutputPayload[] = [];
+  // Debounce timer for showing prompt after command output completes
+  private promptTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor() {
     super('terminal', '终端', {
       position: { x: 100, y: 400 },
@@ -116,9 +121,12 @@ export class TerminalView extends ModuleBase {
     }
 
     // Kick off async initialization
+    // IMPORTANT: listenShellEvents() BEFORE initShell() to avoid race —
+    // initShell() spawns cmd.exe reader threads that can emit events immediately,
+    // before the frontend event listener is registered.
     this.initTerminal();
-    this.initShell();
     this.listenShellEvents();
+    this.initShell();
   }
 
   destroy(): void {
@@ -142,6 +150,12 @@ export class TerminalView extends ModuleBase {
       this.unlistenExit = null;
     } else if (this.unlistenExitPromise) {
       this.unlistenExitPromise.then((fn) => fn()).catch(() => {});
+    }
+
+    // Clear prompt debounce timer
+    if (this.promptTimer) {
+      clearTimeout(this.promptTimer);
+      this.promptTimer = null;
     }
 
     // Disconnect resize observer
@@ -278,11 +292,15 @@ export class TerminalView extends ModuleBase {
         }
 
         // Forward the completed line to shell
+        // NOTE: cmd.exe in pipe mode requires \r\n (CRLF) as line terminator.
+        // A bare \r (CR) is treated as data, never executing the command.
         if (line) {
-          api.writeStdin(this.sessionId, line + '\r').catch((err) => {
+          api.writeStdin(this.sessionId, line + '\r\n').catch((err) => {
             console.warn('[Terminal] write_stdin failed:', err);
           });
         }
+        // Schedule prompt to appear after command output completes
+        this.schedulePrompt();
       } else if (data === '\x7f' || data === '\b') {
         // Backspace — erase last character from buffer and terminal
         if (this.inputBuffer.length > 0) {
@@ -307,9 +325,18 @@ export class TerminalView extends ModuleBase {
       .initShell()
       .then((sid) => {
         this.sessionId = sid;
+        // Flush any shell output that arrived before sessionId was set
+        this.flushOutputBuffer();
+
+        // Send @echo off to prevent cmd.exe from echoing commands back
+        // (would create double-echo confusion with our local echo)
+        api.writeStdin(sid, '@echo off\r\n').catch(() => {});
+
         // Welcome prompt after shell initializes
         if (this.terminal) {
           this.terminal.write('\x1b[32m[DesktopBox Terminal]\x1b[0m 输入命令按 Enter 执行\r\n');
+          // Show initial prompt
+          this.terminal.write('> ');
           this.terminal.focus();
         }
       })
@@ -359,10 +386,17 @@ export class TerminalView extends ModuleBase {
   private listenShellEvents(): void {
     // Listen for shell:output
     const outputPromise = events.onShellOutput((payload) => {
+      // Buffer events that arrive before sessionId is set (race window)
+      if (!this.sessionId) {
+        this.outputBuffer.push(payload);
+        return;
+      }
       if (payload.session_id !== this.sessionId) return;
       if (this.terminal) {
         this.terminal.write(payload.data);
       }
+      // Debounced prompt: reset timer on each chunk, show prompt when output stops
+      this.schedulePrompt();
     });
     if (outputPromise && typeof outputPromise.then === 'function') {
       this.unlistenOutputPromise = outputPromise;
@@ -410,6 +444,26 @@ export class TerminalView extends ModuleBase {
     });
   }
 
+  /** Flush shell output that arrived before sessionId was set (race window protection). */
+  private flushOutputBuffer(): void {
+    for (const payload of this.outputBuffer) {
+      if (payload.session_id === this.sessionId && this.terminal) {
+        this.terminal.write(payload.data);
+      }
+    }
+    this.outputBuffer = [];
+  }
+
+  /** Debounced prompt display: reset on each shell output, fire after output stops. */
+  schedulePrompt(): void {
+    if (this.promptTimer) clearTimeout(this.promptTimer);
+    this.promptTimer = setTimeout(() => {
+      if (this.terminal) {
+        this.terminal.write('\r\n> ');
+      }
+    }, 100);
+  }
+
   /** Intercept known commands locally; return true if consumed. */
   private handleLocalCommand(cmd: string): boolean {
     switch (cmd) {
@@ -418,11 +472,12 @@ export class TerminalView extends ModuleBase {
         return true;
       case 'clear':
         this.terminal?.clear();
+        if (this.terminal) this.terminal.write('> ');
         return true;
       case 'ls':
         // cmd.exe does not support ls — redirect to dir
         if (this.sessionId) {
-          api.writeStdin(this.sessionId, 'dir\r').catch((err) => {
+          api.writeStdin(this.sessionId, 'dir\r\n').catch((err) => {
             console.warn('[Terminal] write_stdin (ls→dir) failed:', err);
           });
         }
@@ -447,7 +502,7 @@ export class TerminalView extends ModuleBase {
         '',
         '═══════════════════════════',
         '',
-      ].join('\r\n') + '\r\n',
+      ].join('\r\n') + '\r\n> ',
     );
   }
 }

@@ -155,10 +155,13 @@ export class TerminalView extends ModuleBase {
   }
 
   protected renderContent(): void {
-    // Terminal output area
+    // Terminal output area (takes remaining flex space)
     this.terminalContainer = document.createElement('div');
     this.terminalContainer.className = 'terminal-container';
     this.contentArea.appendChild(this.terminalContainer);
+
+    // Custom commands bar (bottom of module)
+    this.customCommands = new CustomCommands(this.contentArea, this);
   }
 
   // ── Settings API (used by Task 7) ──

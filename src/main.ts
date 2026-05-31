@@ -1,7 +1,6 @@
 import './styles.css';
 import { listen } from '@tauri-apps/api/event';
 import { moduleManager } from './core/ModuleManager';
-import { DemoModuleDescriptor } from './modules/DemoModule';
 import { IconBoxDescriptor } from './modules/IconBox';
 import { MonitorPanelDescriptor } from './modules/MonitorPanel';
 import { ProcessTableDescriptor } from './modules/ProcessTable';
@@ -79,7 +78,6 @@ export function destroyDevOverlay(): void {
 
 async function main() {
   // Step 1: Register modules
-  moduleManager.register(DemoModuleDescriptor);
   moduleManager.register(IconBoxDescriptor);
   moduleManager.register(MonitorPanelDescriptor);
   moduleManager.register(ProcessTableDescriptor);

@@ -50,9 +50,13 @@ impl ShellManager {
         let session_id = generate_session_id();
         let child_pid = child.id();
 
-        let stdin = child.stdin.take().ok_or("Failed to open stdin")?;
+        let mut stdin = child.stdin.take().ok_or("Failed to open stdin")?;
         let stdout = child.stdout.take().ok_or("Failed to open stdout")?;
         let stderr = child.stderr.take().ok_or("Failed to open stderr")?;
+
+        // 将 cmd.exe 代码页切换为 UTF-8，避免中文系统 CP936(GBK) 导致终端乱码
+        let _ = stdin.write_all(b"chcp 65001>nul\r\n");
+        let _ = stdin.flush();
 
         let session = ShellSession {
             stdin,

@@ -87,7 +87,9 @@
       "Bash(git commit -m 'feat\\(M4\\): T4 前端 xterm.js 管道双向通信 *)",
       "Bash(git commit -m 'feat\\(M4\\): T5 彩色输出支持\\(零代码\\) + T6 自定义指令集 *)",
       "Bash(git commit -m 'feat\\(M4\\): T7 SettingsPanel 集成 *)",
-      "Bash(git commit *)"
+      "Bash(git commit *)",
+      "Bash(taskkill //F //PID 12792)",
+      "Bash(cmd.exe /c \"taskkill /F /PID 12792\")"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

@@ -244,6 +244,14 @@ export class TerminalView extends ModuleBase {
     this.terminal.open(this.terminalContainer);
     this.fitAddon.fit();
 
+    // Focus the terminal so keyboard input is captured immediately
+    this.terminal.focus();
+
+    // Click on container focuses the terminal
+    this.terminalContainer.addEventListener('pointerdown', () => {
+      this.terminal?.focus();
+    });
+
     // Observe container resizes to re-fit
     this.resizeObserver = new ResizeObserver(() => {
       this.fitAddon?.fit();
@@ -264,6 +272,11 @@ export class TerminalView extends ModuleBase {
       .initShell()
       .then((sid) => {
         this.sessionId = sid;
+        // Welcome prompt after shell initializes
+        if (this.terminal) {
+          this.terminal.write('\x1b[32m[DesktopBox Terminal]\x1b[0m 输入命令按 Enter 执行\r\n');
+          this.terminal.focus();
+        }
       })
       .catch((err) => {
         console.warn('[Terminal] init_shell failed:', err);

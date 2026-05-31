@@ -60,7 +60,10 @@
       "Bash(git commit -m 'feat\\(M3\\): T1 Rust基础设施 + T2 ModuleBase重构 *)",
       "Bash(npx eslint *)",
       "Bash(git checkout *)",
-      "Bash(git commit -m 'fix\\(M3\\): QA审查P1+P2修复 *)"
+      "Bash(git commit -m 'fix\\(M3\\): QA审查P1+P2修复 *)",
+      "Bash(git -C \"D:\\\\program\\\\desktopBox\" log --oneline -5)",
+      "Bash(git -C /d/program/desktopBox log --format='%H %s' -1 64a7588)",
+      "Bash(git commit -m 'fix\\(M3\\): PM业务验证2项偏离修复 *)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

@@ -138,7 +138,7 @@ export class MonitorPanel extends ModuleBase {
     this.cpuCard = new MetricCard(this.grid, 'CPU', '%');
     this.gpuCard = new MetricCard(this.grid, 'GPU', '%');
     this.memoryCard = new MetricCard(this.grid, '内存', '');
-    this.timeCard = new MetricCard(this.grid, '运行时间', '');
+    this.timeCard = new MetricCard(this.grid, '系统时间', '');
   }
 
   // ── Private ──
@@ -170,15 +170,21 @@ export class MonitorPanel extends ModuleBase {
       this.gpuCard?.setValue('N/A');
     }
 
-    // Memory card
+    // Memory card — show usage with percentage
     const { used, total, unit } = formatMemory(stats.memory_used, stats.memory_total);
-    this.memoryCard?.setValue(`${used} / ${total} ${unit}`);
+    const percent =
+      stats.memory_total > 0
+        ? ((stats.memory_used / stats.memory_total) * 100).toFixed(1)
+        : '0.0';
+    this.memoryCard?.setValue(`${used} / ${total} ${unit} (${percent}%)`);
   }
 
   private updateTimeCard(): void {
     const now = new Date();
-    this.timeCard?.setValue(
-      formatTime(now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds()),
-    );
+    // YYYY-MM-DD
+    const date = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    // HH:MM:SS
+    const time = formatTime(now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds());
+    this.timeCard?.setValue(`${date}  ${time}`);
   }
 }

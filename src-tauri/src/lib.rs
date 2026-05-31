@@ -8,6 +8,7 @@ use tauri::{Manager, PhysicalSize, PhysicalPosition};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::services::file_poller::FilePoller;
+use crate::services::shell_manager::ShellManager;
 use crate::services::system_monitor::SystemMonitor;
 use crate::services::AppService;
 
@@ -81,6 +82,10 @@ pub fn run() {
             }
             app.manage(Mutex::new(monitor));
 
+            // ── ShellManager: 终端子进程管理 ──
+            // 通过 app.manage() 托管，Mutex 包裹 HashMap<String, ShellSession>
+            app.manage(Mutex::new(ShellManager::new(app.handle().clone())));
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -90,6 +95,10 @@ pub fn run() {
             commands::desktop::open_file,
             commands::desktop::get_desktop_files,
             commands::system::get_system_stats,
+            commands::shell::init_shell,
+            commands::shell::write_stdin,
+            commands::shell::resize_shell,
+            commands::shell::kill_shell,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

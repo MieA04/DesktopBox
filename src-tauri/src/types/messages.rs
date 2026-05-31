@@ -35,3 +35,17 @@ pub struct ProcessInfo {
     pub memory_usage: u64,
 }
 
+// ── M4: Terminal / Shell ──
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShellOutputPayload {
+    pub session_id: String,
+    pub data: String,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShellExitPayload {
+    pub session_id: String,
+    pub exit_code: i32,
+}
+

@@ -135,6 +135,16 @@ export abstract class ModuleBase {
 
   getState(): ModuleState { return { ...this.state }; }
 
+  // ── Settings Hook ──
+
+  /**
+   * 齿轮图标点击回调。
+   * 默认空实现（无设置面板），子类可覆写以打开 SettingsPanel。
+   */
+  protected onSettingsClick(): void {
+    // 默认无操作
+  }
+
   // ── Title Bar ──
 
   protected createTitleBar(): void {
@@ -146,7 +156,19 @@ export abstract class ModuleBase {
     titleSpan.className = 'module-title';
     titleSpan.textContent = this.title;
 
+    // 齿轮图标按钮（调用 onSettingsClick 钩子）
+    const settingsBtn = document.createElement('button');
+    settingsBtn.className = 'module-settings-btn';
+    settingsBtn.textContent = '⚙';
+    const onSettingsClick = (e: Event) => {
+      e.stopPropagation();
+      this.onSettingsClick();
+    };
+    settingsBtn.addEventListener('click', onSettingsClick);
+    this.boundHandlers.push({ el: settingsBtn, type: 'click', handler: onSettingsClick });
+
     this.titleBar.appendChild(titleSpan);
+    this.titleBar.appendChild(settingsBtn);
     this.container.insertBefore(this.titleBar, this.contentArea);
   }
 

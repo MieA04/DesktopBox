@@ -3,6 +3,7 @@ import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
 import { appState } from '../../core/StateManager';
 import { events, ProcessInfo } from '../../utils/tauriApi';
+import { SettingsPanel } from '../../components/SettingsPanel';
 import { ProcessFilter } from './ProcessFilter';
 import './styles.css';
 
@@ -31,6 +32,7 @@ export class ProcessTable extends ModuleBase {
   private filter: ProcessFilter | null = null;
   private tbody: HTMLElement | null = null;
   private headerRow: HTMLElement | null = null;
+  private settingsPanel: SettingsPanel | null = null;
 
   // Signal subscription for reactive row rendering
   private unsubFilteredProcesses: (() => void) | null = null;
@@ -80,7 +82,22 @@ export class ProcessTable extends ModuleBase {
     this.listenSystemProcesses();
   }
 
+  protected onSettingsClick(): void {
+    if (!this.settingsPanel) {
+      this.settingsPanel = new SettingsPanel(this.container, this, () => {
+        this.settingsPanel = null;
+      });
+    } else {
+      this.settingsPanel.close();
+      this.settingsPanel = null;
+    }
+  }
+
   destroy(): void {
+    // Close settings panel if open
+    this.settingsPanel?.close();
+    this.settingsPanel = null;
+
     // Clean up ProcessFilter
     this.filter?.destroy();
 

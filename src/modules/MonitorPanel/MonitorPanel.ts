@@ -3,6 +3,7 @@ import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
 import { appState } from '../../core/StateManager';
 import { events, SystemStats } from '../../utils/tauriApi';
+import { SettingsPanel } from '../../components/SettingsPanel';
 import { MetricCard } from './MetricCard';
 import './styles.css';
 
@@ -28,6 +29,7 @@ export class MonitorPanel extends ModuleBase {
   private gpuCard: MetricCard | null = null;
   private memoryCard: MetricCard | null = null;
   private timeCard: MetricCard | null = null;
+  private settingsPanel: SettingsPanel | null = null;
 
   // Signal subscription for reactive updates
   private unsubStats: (() => void) | null = null;
@@ -84,7 +86,22 @@ export class MonitorPanel extends ModuleBase {
     }, 1000);
   }
 
+  protected onSettingsClick(): void {
+    if (!this.settingsPanel) {
+      this.settingsPanel = new SettingsPanel(this.container, this, () => {
+        this.settingsPanel = null;
+      });
+    } else {
+      this.settingsPanel.close();
+      this.settingsPanel = null;
+    }
+  }
+
   destroy(): void {
+    // Close settings panel if open
+    this.settingsPanel?.close();
+    this.settingsPanel = null;
+
     // Clean up signal subscription
     if (this.unsubStats) {
       this.unsubStats();

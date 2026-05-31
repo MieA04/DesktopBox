@@ -141,6 +141,89 @@ html, body {
   backdrop-filter: blur(4px);
 }
 
+/* ── Settings Panel & Slider (T5) ── */
+
+.slider-container {
+  padding: 8px 12px;
+}
+
+.slider-label {
+  font-size: 12px;
+  color: #ccc;
+  display: block;
+  margin-bottom: 4px;
+}
+
+.slider-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.slider-input {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 2px;
+  outline: none;
+}
+
+.slider-input::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.slider-input::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: #fff;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.slider-value {
+  min-width: 36px;
+  font-size: 12px;
+  color: #fff;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.settings-panel {
+  position: absolute;
+  top: 32px;
+  right: 4px;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 8px;
+  padding: 8px 0;
+  z-index: 100;
+  min-width: 200px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.module-settings-btn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  cursor: pointer;
+  font-size: 14px;
+  padding: 2px 6px;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.module-settings-btn:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
 /* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;

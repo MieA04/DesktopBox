@@ -2,7 +2,7 @@ import { appState } from '../../core/StateManager';
 
 /**
  * Search/filter input for the process list.
- * T4: Skeleton implementation — T5 will extend with additional filtering options.
+ * Updates appState.searchQuery reactively on each input event.
  */
 export class ProcessFilter {
   private el: HTMLElement;

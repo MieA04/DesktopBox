@@ -7,6 +7,7 @@ import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
 import { api, events } from '../../utils/tauriApi';
 import { Slider } from '../../components/Slider';
+import { SettingsPanel } from '../../components/SettingsPanel';
 import { CustomCommands } from './CustomCommands';
 import './styles.css';
 
@@ -75,11 +76,8 @@ export class TerminalView extends ModuleBase {
   // Resize observer for fit addon
   private resizeObserver: ResizeObserver | null = null;
 
-  // Settings panel (Task 7)
-  private settingsPanel: HTMLElement | null = null;
-  private settingsFontSlider: Slider | null = null;
-  private settingsThemeBtn: HTMLElement | null = null;
-  private handleExternalPointerDown: ((e: PointerEvent) => void) | null = null;
+  // Settings panel (shared component + terminal extras)
+  private settingsPanel: SettingsPanel | null = null;
 
   constructor() {
     super('terminal', '终端', {
@@ -219,16 +217,10 @@ export class TerminalView extends ModuleBase {
 
   /** Close and destroy the settings panel */
   closeSettingsPanel(): void {
-    if (this.handleExternalPointerDown) {
-      document.removeEventListener('pointerdown', this.handleExternalPointerDown);
-      this.handleExternalPointerDown = null;
+    if (this.settingsPanel) {
+      this.settingsPanel.close();
+      this.settingsPanel = null;
     }
-    this.settingsFontSlider?.destroy();
-    this.settingsFontSlider = null;
-    this.settingsThemeBtn?.remove();
-    this.settingsThemeBtn = null;
-    this.settingsPanel?.remove();
-    this.settingsPanel = null;
   }
 
   // ── Private ──
@@ -282,11 +274,12 @@ export class TerminalView extends ModuleBase {
   }
 
   private createSettingsPanel(): void {
-    this.settingsPanel = document.createElement('div');
-    this.settingsPanel.className = 'settings-panel';
-
+    // Build terminal-specific extra widgets
     // Font size slider (10-24)
-    this.settingsFontSlider = new Slider(this.settingsPanel, {
+    const extraWidgets: HTMLElement[] = [];
+
+    const fontContainer = document.createElement('div');
+    const fontSlider = new Slider(fontContainer, {
       min: 10,
       max: 24,
       step: 1,
@@ -295,42 +288,24 @@ export class TerminalView extends ModuleBase {
       onInput: (v) => this.setTerminalFontSize(v),
       onChange: () => {},
     });
+    extraWidgets.push(fontContainer);
 
     // Theme toggle button
-    this.settingsThemeBtn = document.createElement('button');
-    this.settingsThemeBtn.className = 'terminal-theme-btn';
-    this.settingsThemeBtn.textContent =
-      this.settings.theme === 'dark' ? '切换到浅色' : '切换到暗色';
-    this.settingsThemeBtn.addEventListener('click', () => {
-      const newTheme: TerminalTheme =
-        this.settings.theme === 'dark' ? 'light' : 'dark';
+    const themeBtn = document.createElement('button');
+    themeBtn.className = 'terminal-theme-btn';
+    themeBtn.textContent = this.settings.theme === 'dark' ? '切换到浅色' : '切换到暗色';
+    themeBtn.addEventListener('click', () => {
+      const newTheme: TerminalTheme = this.settings.theme === 'dark' ? 'light' : 'dark';
       this.setTerminalTheme(newTheme);
-      if (this.settingsThemeBtn) {
-        this.settingsThemeBtn.textContent =
-          newTheme === 'dark' ? '切换到浅色' : '切换到暗色';
-      }
+      themeBtn.textContent = newTheme === 'dark' ? '切换到浅色' : '切换到暗色';
     });
-    this.settingsPanel.appendChild(this.settingsThemeBtn);
+    extraWidgets.push(themeBtn);
 
-    this.container.appendChild(this.settingsPanel);
-
-    // Auto-close on external click
-    this.handleExternalPointerDown = (e: PointerEvent) => {
-      if (
-        this.settingsPanel &&
-        !this.settingsPanel.contains(e.target as Node)
-      ) {
-        this.closeSettingsPanel();
-      }
-    };
-    setTimeout(() => {
-      if (this.handleExternalPointerDown) {
-        document.addEventListener(
-          'pointerdown',
-          this.handleExternalPointerDown,
-        );
-      }
-    }, 0);
+    // Create shared SettingsPanel with blur + opacity sliders + extra widgets
+    this.settingsPanel = new SettingsPanel(this.container, this, () => {
+      this.settingsPanel = null;
+      fontSlider.destroy();
+    }, extraWidgets);
   }
 
   private listenShellEvents(): void {

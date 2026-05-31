@@ -24,7 +24,15 @@ export class SettingsPanel {
   /** 外部 pointerdown 监听，用于自动关闭 */
   private handleExternalPointerDown: (e: PointerEvent) => void;
 
-  constructor(container: HTMLElement, module: ModuleBase, onClose: () => void) {
+  /**
+   * @param extraWidgets 可选的自定义 DOM 元素数组，追加到面板底部（如字体大小、主题切换等模块专属设置）
+   */
+  constructor(
+    container: HTMLElement,
+    module: ModuleBase,
+    onClose: () => void,
+    extraWidgets?: HTMLElement[],
+  ) {
     this.module = module;
     this.onClose = onClose;
 
@@ -52,6 +60,11 @@ export class SettingsPanel {
       onInput: (v) => this.module.setBgOpacity(v),
       onChange: (v) => eventBus.emit('settings:changed', { key: 'opacity', value: v }),
     });
+
+    // 追加模块专属的额外设置控件
+    if (extraWidgets) {
+      extraWidgets.forEach((widget) => this.el.appendChild(widget));
+    }
 
     container.appendChild(this.el);
 

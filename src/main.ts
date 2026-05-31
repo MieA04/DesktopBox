@@ -5,6 +5,7 @@ import { DemoModuleDescriptor } from './modules/DemoModule';
 import { IconBoxDescriptor } from './modules/IconBox';
 import { MonitorPanelDescriptor } from './modules/MonitorPanel';
 import { ProcessTableDescriptor } from './modules/ProcessTable';
+import { TerminalDescriptor } from './modules/Terminal';
 import { DEFAULT } from './utils/constants';
 
 /**
@@ -82,6 +83,7 @@ async function main() {
   moduleManager.register(IconBoxDescriptor);
   moduleManager.register(MonitorPanelDescriptor);
   moduleManager.register(ProcessTableDescriptor);
+  moduleManager.register(TerminalDescriptor);
 
   // Step 2: Initialize all modules
   try {

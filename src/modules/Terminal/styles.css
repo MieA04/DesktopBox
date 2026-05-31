@@ -60,3 +60,23 @@
 .custom-command-btn:active {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* ── Settings Panel Theme Button (Task 7) ── */
+
+.terminal-theme-btn {
+  display: block;
+  width: 100%;
+  margin-top: 8px;
+  padding: 6px 12px;
+  border: 1px solid rgba(128, 128, 128, 0.4);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.terminal-theme-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+}

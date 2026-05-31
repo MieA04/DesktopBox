@@ -6,6 +6,7 @@ import { ModuleBase } from '../../core/ModuleBase';
 import { dragEngine } from '../../core/DragEngine';
 import { moduleManager } from '../../core/ModuleManager';
 import { api, events } from '../../utils/tauriApi';
+import { Slider } from '../../components/Slider';
 import { CustomCommands } from './CustomCommands';
 import './styles.css';
 
@@ -74,6 +75,12 @@ export class TerminalView extends ModuleBase {
   // Resize observer for fit addon
   private resizeObserver: ResizeObserver | null = null;
 
+  // Settings panel (Task 7)
+  private settingsPanel: HTMLElement | null = null;
+  private settingsFontSlider: Slider | null = null;
+  private settingsThemeBtn: HTMLElement | null = null;
+  private handleExternalPointerDown: ((e: PointerEvent) => void) | null = null;
+
   constructor() {
     super('terminal', '终端', {
       position: { x: 100, y: 400 },
@@ -114,6 +121,9 @@ export class TerminalView extends ModuleBase {
   }
 
   destroy(): void {
+    // Close settings panel
+    this.closeSettingsPanel();
+
     // Kill shell session
     this.killSession();
 
@@ -197,6 +207,30 @@ export class TerminalView extends ModuleBase {
     return this.sessionId;
   }
 
+  // ── Settings Panel (Task 7) ──
+
+  protected onSettingsClick(): void {
+    if (!this.settingsPanel) {
+      this.createSettingsPanel();
+    } else {
+      this.closeSettingsPanel();
+    }
+  }
+
+  /** Close and destroy the settings panel */
+  closeSettingsPanel(): void {
+    if (this.handleExternalPointerDown) {
+      document.removeEventListener('pointerdown', this.handleExternalPointerDown);
+      this.handleExternalPointerDown = null;
+    }
+    this.settingsFontSlider?.destroy();
+    this.settingsFontSlider = null;
+    this.settingsThemeBtn?.remove();
+    this.settingsThemeBtn = null;
+    this.settingsPanel?.remove();
+    this.settingsPanel = null;
+  }
+
   // ── Private ──
 
   private initTerminal(): void {
@@ -245,6 +279,58 @@ export class TerminalView extends ModuleBase {
           this.terminal.writeln('\r\n\x1b[31mFailed to initialize shell.\x1b[0m');
         }
       });
+  }
+
+  private createSettingsPanel(): void {
+    this.settingsPanel = document.createElement('div');
+    this.settingsPanel.className = 'settings-panel';
+
+    // Font size slider (10-24)
+    this.settingsFontSlider = new Slider(this.settingsPanel, {
+      min: 10,
+      max: 24,
+      step: 1,
+      value: this.settings.fontSize,
+      label: '字体大小',
+      onInput: (v) => this.setTerminalFontSize(v),
+      onChange: () => {},
+    });
+
+    // Theme toggle button
+    this.settingsThemeBtn = document.createElement('button');
+    this.settingsThemeBtn.className = 'terminal-theme-btn';
+    this.settingsThemeBtn.textContent =
+      this.settings.theme === 'dark' ? '切换到浅色' : '切换到暗色';
+    this.settingsThemeBtn.addEventListener('click', () => {
+      const newTheme: TerminalTheme =
+        this.settings.theme === 'dark' ? 'light' : 'dark';
+      this.setTerminalTheme(newTheme);
+      if (this.settingsThemeBtn) {
+        this.settingsThemeBtn.textContent =
+          newTheme === 'dark' ? '切换到浅色' : '切换到暗色';
+      }
+    });
+    this.settingsPanel.appendChild(this.settingsThemeBtn);
+
+    this.container.appendChild(this.settingsPanel);
+
+    // Auto-close on external click
+    this.handleExternalPointerDown = (e: PointerEvent) => {
+      if (
+        this.settingsPanel &&
+        !this.settingsPanel.contains(e.target as Node)
+      ) {
+        this.closeSettingsPanel();
+      }
+    };
+    setTimeout(() => {
+      if (this.handleExternalPointerDown) {
+        document.addEventListener(
+          'pointerdown',
+          this.handleExternalPointerDown,
+        );
+      }
+    }, 0);
   }
 
   private listenShellEvents(): void {

@@ -4,6 +4,7 @@ export const STORAGE_KEYS = {
   MODULE_LAYOUTS: 'module-layouts',
   APP_SETTINGS: 'app-settings',
   ICON_ORDER: 'icon-order',
+  CUSTOM_COMMANDS: 'custom-commands',
 } as const;
 
 export class Persistence {

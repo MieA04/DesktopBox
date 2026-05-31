@@ -34,6 +34,17 @@ export interface ProcessInfo {
   memory_usage: number;
 }
 
+// M4: Shell output / exit payloads
+export interface ShellOutputPayload {
+  session_id: string;
+  data: string;
+}
+
+export interface ShellExitPayload {
+  session_id: string;
+  exit_code: number;
+}
+
 // ── API ──
 
 export const api = {
@@ -45,6 +56,13 @@ export const api = {
   // M2a: Desktop file operations
   getDesktopFiles: () => invoke<FileEntry[]>('get_desktop_files'),
   openFile: (path: string) => invoke<void>('open_file', { path }),
+
+  // M4: Shell operations
+  initShell: () => invoke<string>('init_shell'),
+  writeStdin: (sessionId: string, data: string) => invoke<void>('write_stdin', { sessionId, data }),
+  resizeShell: (sessionId: string, cols: number, rows: number) =>
+    invoke<void>('resize_shell', { sessionId, cols, rows }),
+  killShell: (sessionId: string) => invoke<void>('kill_shell', { sessionId }),
 };
 
 // ── Events ──
@@ -61,4 +79,12 @@ export const events = {
   // M3: Process list
   onProcessList: (cb: (processes: ProcessInfo[]) => void) =>
     listen<ProcessInfo[]>('system:processes', (e) => cb(e.payload)),
+
+  // M4: Shell real-time output
+  onShellOutput: (cb: (payload: ShellOutputPayload) => void) =>
+    listen<ShellOutputPayload>('shell:output', (e) => cb(e.payload)),
+
+  // M4: Shell process exit
+  onShellExit: (cb: (payload: ShellExitPayload) => void) =>
+    listen<ShellExitPayload>('shell:exit', (e) => cb(e.payload)),
 };

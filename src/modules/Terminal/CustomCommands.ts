@@ -7,5 +7,7 @@
  * Stub — 将在 Task 6 中完整实现。
  */
 export class CustomCommands {
-  // Stub for Task 6
+  destroy(): void {
+    // Stub for Task 6
+  }
 }

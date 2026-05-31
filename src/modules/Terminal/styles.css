@@ -1,9 +1,29 @@
-/* Terminal module — Task 1 skeleton */
-.terminal-placeholder {
+/* M4: Terminal module — xterm.js container and layout */
+
+.terminal-container {
+  flex: 1;
   display: flex;
-  align-items: center;
-  justify-content: center;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 0;
+  min-height: 0;
+}
+
+/* xterm.js injected elements fill the container naturally */
+.terminal-container .xterm {
   height: 100%;
-  color: #888;
-  font-size: 14px;
+  padding: 4px;
+}
+
+/* Ensure the terminal viewport fills available space */
+.terminal-container .xterm-viewport {
+  scrollbar-width: thin;
+}
+
+/* Light theme override: xterm background is set via JS, this is a fallback */
+.module[data-module-id="terminal"] .module-content {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }

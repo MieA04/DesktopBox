@@ -2,61 +2,17 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <link rel="stylesheet" href="/src/styles.css" />
+    <meta name="description" content="DesktopBox - 桌面图标管理与系统监控辅助工具" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DesktopBox</title>
-    <script type="module" src="/src/main.ts" defer></script>
   </head>
   <body>
     <div id="app">
-      <!-- 标题栏（自定义拖动区域）-->
-      <header id="titlebar">
-        <div id="titlebar-drag" class="drag-region">
-          <span id="app-title">DesktopBox</span>
-        </div>
-        <div id="titlebar-controls">
-          <button id="btn-minimize" class="titlebar-btn" title="最小化">─</button>
-          <button id="btn-close" class="titlebar-btn" title="退出">✕</button>
-        </div>
-      </header>
-
-      <!-- 主布局 -->
-      <div id="main-layout">
-        <!-- 侧边栏：收纳盒分区列表 -->
-        <aside id="sidebar">
-          <div class="sidebar-section">
-            <h3>分区</h3>
-            <ul id="partition-list">
-              <li class="partition-item active">桌面图标</li>
-              <li class="partition-item">文档</li>
-              <li class="partition-item">工具</li>
-            </ul>
-          </div>
-          <div class="sidebar-section">
-            <h3>系统监控</h3>
-            <div id="monitor-panel">
-              <div class="monitor-item">
-                <span class="monitor-label">CPU</span>
-                <span class="monitor-value" id="cpu-usage">--%</span>
-              </div>
-              <div class="monitor-item">
-                <span class="monitor-label">内存</span>
-                <span class="monitor-value" id="mem-usage">--%</span>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        <!-- 主内容区：桌面图标展示 -->
-        <main id="content">
-          <div id="desktop-view">
-            <div class="empty-state">
-              <p>桌面图标将在此显示</p>
-              <p class="hint">按 Ctrl+Shift+D 切换窗口显示</p>
-            </div>
-          </div>
-        </main>
-      </div>
+      <div id="background-layer"></div>
+      <div id="modules-container"></div>
     </div>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

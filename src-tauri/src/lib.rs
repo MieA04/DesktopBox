@@ -1,164 +1,100 @@
-// DesktopBox - Main Application Entry
-// Tauri 2 backend with WinAPI desktop/taskbar control, tray icon, global shortcuts
+mod commands;
+mod services;
+mod types;
 
-#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
+use std::sync::Mutex;
+use std::time::Duration;
+use tauri::{Manager, PhysicalSize, PhysicalPosition};
+use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
+use tauri_plugin_store::StoreExt;
 
-mod desktop_icons;
-mod taskbar;
-
-use tauri::{
-    Manager,
-    menu::{Menu, MenuItem},
-    tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    Runtime, WebviewWindow,
-};
-use tauri_plugin_global_shortcut::GlobalShortcutExt;
-use tauri_plugin_global_shortcut::ShortcutState;
-
-// ─── Tauri Commands ───────────────────────────────────────────
+use crate::services::file_poller::{AppService, FilePoller};
 
 #[tauri::command]
-fn hide_desktop_icons() -> Result<(), String> {
-    desktop_icons::hide()
+fn get_window_downgrade(app: tauri::AppHandle) -> Result<bool, String> {
+    let store = app.store("settings.json").map_err(|e| e.to_string())?;
+    let val = store.get("window_downgrade");
+    Ok(val.and_then(|v| v.as_bool()).unwrap_or(false))
 }
 
 #[tauri::command]
-fn show_desktop_icons() -> Result<(), String> {
-    desktop_icons::show()
+fn set_window_downgrade(app: tauri::AppHandle, downgrade: bool) -> Result<(), String> {
+    let store = app.store("settings.json").map_err(|e| e.to_string())?;
+    store.set("window_downgrade", serde_json::json!(downgrade));
+    store.save().map_err(|e| e.to_string())?;
+    Ok(())
 }
 
-#[tauri::command]
-fn hide_taskbar() -> Result<(), String> {
-    taskbar::hide()
-}
-
-#[tauri::command]
-fn show_taskbar() -> Result<(), String> {
-    taskbar::show()
-}
-
-#[tauri::command]
-fn toggle_window_visibility(window: WebviewWindow) -> Result<(), String> {
-    if window.is_visible().unwrap_or(false) {
-        window.hide().map_err(|e| e.to_string())
-    } else {
-        window.show().map_err(|e| e.to_string())
-    }
-}
-
-// ─── Window Effects Setup ────────────────────────────────────
-
-use tauri::window::{Effect, EffectState, EffectsBuilder};
-
-fn apply_window_effects<R: Runtime>(app: &tauri::AppHandle<R>) {
-    if let Some(window) = app.get_webview_window("main") {
-        #[cfg(target_os = "windows")]
-        {
-            let _ = window.set_effects(
-                EffectsBuilder::new()
-                    .effects(vec![Effect::Acrylic])
-                    .state(EffectState::Active)
-                    .build(),
-            );
-        }
-    }
-}
-
-// ─── Tray Menu Event Handler ────────────────────────────────
-
-fn handle_tray_menu_event(app_handle: &tauri::AppHandle, event_id: &str) {
-    match event_id {
-        "toggle" => {
-            if let Some(window) = app_handle.get_webview_window("main") {
-                let _ = toggle_window_visibility(window);
-            }
-        }
-        "reset_taskbar" => {
-            let _ = taskbar::show();
-            let _ = desktop_icons::show();
-        }
-        "quit" => {
-            // Restore desktop icons and taskbar before exit
-            let _ = taskbar::show();
-            let _ = desktop_icons::show();
-            app_handle.exit(0);
-        }
-        _ => {}
-    }
-}
-
-// ─── App Entry Point ──────────────────────────────────────────
-
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
-        .plugin(
-            tauri_plugin_global_shortcut::Builder::new()
-                .with_handler(move |app, shortcut, event| {
-                    if event.state == ShortcutState::Pressed
-                        && shortcut.matches(
-                            tauri_plugin_global_shortcut::Modifiers::CONTROL
-                                | tauri_plugin_global_shortcut::Modifiers::SHIFT,
-                            tauri_plugin_global_shortcut::Code::KeyD,
-                        )
-                    {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = toggle_window_visibility(window);
-                        }
-                    }
-                })
-                .build(),
-        )
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_store::Builder::new().build())
         .setup(|app| {
-            // ── Window acrylic/mica effects ──
-            apply_window_effects(app.handle());
-
-            // ── Tray Menu ──
-            let show_hide =
-                MenuItem::with_id(app, "toggle", "显示/隐藏窗口", true, None::<&str>)?;
-            let reset_taskbar =
-                MenuItem::with_id(app, "reset_taskbar", "重置任务栏", true, None::<&str>)?;
-            let quit = MenuItem::with_id(app, "quit", "退出", true, None::<&str>)?;
-            let menu = Menu::with_items(app, &[&show_hide, &reset_taskbar, &quit])?;
-
-            // ── Tray Icon ──
-            let _tray = TrayIconBuilder::new()
-                .menu(&menu)
-                .tooltip("DesktopBox")
-                .on_menu_event(|app_handle, event| {
-                    handle_tray_menu_event(app_handle, event.id.as_ref());
-                })
-                .on_tray_icon_event(|tray, event| {
-                    if let TrayIconEvent::Click {
-                        button: MouseButton::Left,
-                        button_state: MouseButtonState::Up,
-                        ..
-                    } = event
-                    {
-                        let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = toggle_window_visibility(window);
-                        }
+            // ── 窗口配置：桌面层 Z-序 + 程序化全屏 ──
+            // [BUG-3] 窗口置于所有应用之下，不遮挡浏览器/IDE
+            // [BUG-2] 移除 fullscreen:true 改用程序化全屏（避免 DWM 合成被独占模式绕过）
+            if let Some(window) = app.get_webview_window("main") {
+                // Z-序：窗口钉在底部（桌面之上，所有应用之下）
+                if let Err(e) = window.set_always_on_bottom(true) {
+                    eprintln!("[DesktopBox] Warn: failed to set always_on_bottom: {e}");
+                }
+                // 不在任务栏显示
+                if let Err(e) = window.set_skip_taskbar(true) {
+                    eprintln!("[DesktopBox] Warn: failed to set skip_taskbar: {e}");
+                }
+                // 不抢夺焦点（Alt+Tab 不出现）
+                if let Err(e) = window.set_focusable(false) {
+                    eprintln!("[DesktopBox] Warn: failed to set focusable: {e}");
+                }
+                // 程序化全屏：获取主显示器尺寸并设置窗口覆盖
+                if let Ok(Some(monitor)) = window.current_monitor() {
+                    let size = monitor.size();
+                    if let Err(e) = window.set_size(PhysicalSize::new(size.width, size.height)) {
+                        eprintln!("[DesktopBox] Warn: failed to set window size: {e}");
                     }
-                })
-                .build(app)?;
+                    if let Err(e) = window.set_position(PhysicalPosition::new(0, 0)) {
+                        eprintln!("[DesktopBox] Warn: failed to set window position: {e}");
+                    }
+                }
+            }
 
-            // ── Register Global Shortcut ──
-            app.global_shortcut().register("Ctrl+Shift+D")?;
+            // 桌面图标与任务栏由用户在 Windows 系统设置中手动管理
+            // 启动时不再自动隐藏（REQ-SYS-001/002 已降级为 P3）
 
-            // ── Auto-hide desktop icons and taskbar on startup ──
-            let _ = desktop_icons::hide();
-            let _ = taskbar::hide();
+            // 全局快捷键：Ctrl+Shift+D 切换模块显隐 [REQ-SYS-003]
+            // on_shortcut 内部已包含注册逻辑，无需单独调用 register()
+            let handle = app.handle().clone();
+            let _ = app.global_shortcut().on_shortcut(
+                Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyD),
+                move |_app, _shortcut, event: ShortcutEvent| {
+                    // 只响应按下事件，忽略释放事件（否则触发两次，模块立即重新显示）
+                    if !matches!(event.state, ShortcutState::Pressed) {
+                        return;
+                    }
+                    println!("[DesktopBox] Global shortcut Ctrl+Shift+D triggered");
+                    if let Some(window) = handle.get_webview_window("main") {
+                        let _ = commands::window::toggle_modules_visibility(window);
+                    }
+                },
+            );
+
+            // ── FilePoller: 实时监听桌面文件变化 ──
+            // 通过 app.manage() 托管，应用退出时自动 Drop → 停止轮询线程
+            let mut poller = FilePoller::new(app.handle().clone(), Duration::from_millis(300));
+            if let Err(e) = poller.start() {
+                eprintln!("[DesktopBox] FilePoller failed to start: {e}");
+            }
+            app.manage(Mutex::new(poller));
 
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            hide_desktop_icons,
-            show_desktop_icons,
-            hide_taskbar,
-            show_taskbar,
-            toggle_window_visibility,
+            commands::window::toggle_modules_visibility,
+            commands::desktop::open_file,
+            commands::desktop::get_desktop_files,
+            get_window_downgrade,
+            set_window_downgrade,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

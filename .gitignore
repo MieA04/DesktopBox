@@ -1,4 +1,5 @@
-.tauri/
 node_modules/
 dist/
+.tauri/
 target/
+*.log

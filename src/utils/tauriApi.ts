@@ -1,26 +1,40 @@
-// DesktopBox - Tauri API Wrapper
-// Type-safe wrappers around Tauri invoke calls
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 
-import { invoke } from "@tauri-apps/api/core";
+// ── Types ──
 
-// ─── System UI Control ─────────────────────────────────────
-
-export async function hideDesktopIcons(): Promise<void> {
-  await invoke("hide_desktop_icons");
+export interface FileEntry {
+  name: string;
+  path: string;
+  is_dir: boolean;
+  extension: string | null;
 }
 
-export async function showDesktopIcons(): Promise<void> {
-  await invoke("show_desktop_icons");
+export interface DesktopChangePayload {
+  added: FileEntry[];
+  removed: FileEntry[];
+  modified: FileEntry[];
+  is_full: boolean;
 }
 
-export async function hideTaskbar(): Promise<void> {
-  await invoke("hide_taskbar");
-}
+// ── API ──
 
-export async function showTaskbar(): Promise<void> {
-  await invoke("show_taskbar");
-}
+export const api = {
+  // Window control [REQ-SYS]
+  toggleModulesVisibility: () => invoke<void>('toggle_modules_visibility'),
+  getWindowDowngrade: () => invoke<boolean>('get_window_downgrade'),
+  setWindowDowngrade: (downgrade: boolean) =>
+    invoke<void>('set_window_downgrade', { downgrade }),
 
-export async function toggleWindowVisibility(): Promise<void> {
-  await invoke("toggle_window_visibility");
-}
+  // M2a: Desktop file operations
+  getDesktopFiles: () => invoke<FileEntry[]>('get_desktop_files'),
+  openFile: (path: string) => invoke<void>('open_file', { path }),
+};
+
+// ── Events ──
+
+export const events = {
+  // M2a: Listen for real-time desktop file changes from FilePoller
+  onDesktopFiles: (cb: (payload: DesktopChangePayload) => void) =>
+    listen<DesktopChangePayload>('desktop:files', e => cb(e.payload)),
+};

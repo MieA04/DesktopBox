@@ -1,47 +1,14 @@
-/* ─── DesktopBox Global Styles ────────────────────────────── */
-/* Semi-transparent acrylic/mica compatible theme             */
-
-/* ─── CSS Variables / Theme ─── */
+/* DesktopBox 全局样式 */
 :root {
-  /* Light theme (default) */
-  --bg-primary: rgba(245, 245, 245, 0.45);
-  --bg-secondary: rgba(235, 235, 235, 0.50);
-  --bg-tertiary: rgba(225, 225, 225, 0.55);
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-muted: #888888;
-  --border-color: rgba(0, 0, 0, 0.08);
-  --accent-color: #396cd8;
-  --accent-hover: #2b5bc7;
-  --titlebar-height: 36px;
-  --sidebar-width: 240px;
-  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.08);
-  --transition-fast: 150ms ease;
-  --transition-normal: 250ms ease;
+  --blur-strength: 20px;
+  --bg-opacity: 0.6;
+  --bg-rgb: 255, 255, 255;
+  --module-radius: 8px;
+  --titlebar-height: 32px;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg-primary: rgba(30, 30, 30, 0.50);
-    --bg-secondary: rgba(40, 40, 40, 0.55);
-    --bg-tertiary: rgba(50, 50, 50, 0.60);
-    --text-primary: #f0f0f0;
-    --text-secondary: #aaaaaa;
-    --text-muted: #777777;
-    --border-color: rgba(255, 255, 255, 0.06);
-    --accent-color: #4f8cff;
-    --accent-hover: #6ba0ff;
-    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.2);
-    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.3);
-  }
-}
-
-/* ─── Reset & Base ─── */
-*, *::before, *::after {
+/* 全局重置 */
+* {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
@@ -51,204 +18,130 @@ html, body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  font-family: var(--font-family);
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-primary);
-  background: transparent;  /* 透明背景，让亚克力效果透出 */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  user-select: none;
-  -webkit-user-select: none;
+  background: transparent;
 }
 
-/* ─── App Container ─── */
 #app {
   width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  background: var(--bg-primary);
-  backdrop-filter: blur(30px) saturate(1.2);
-  -webkit-backdrop-filter: blur(30px) saturate(1.2);
-  border: 1px solid var(--border-color);
-}
-
-/* ─── Titlebar (Custom Window Drag Region) ─── */
-#titlebar {
-  height: var(--titlebar-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0;
-}
-
-.drag-region {
-  flex: 1;
-  height: 100%;
-  display: flex;
-  align-items: center;
-  padding: 0 12px;
-  /* 整个标题栏都是拖动区域 */
-  -webkit-app-region: drag;
-  app-region: drag;
-}
-
-#app-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  letter-spacing: 0.3px;
-}
-
-#titlebar-controls {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  -webkit-app-region: no-drag;
-  app-region: no-drag;
-}
-
-.titlebar-btn {
-  width: 40px;
-  height: var(--titlebar-height);
-  border: none;
+  position: relative;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 14px;
-  cursor: pointer;
+}
+
+/* 透明背景层—鼠标穿透，点击穿透到桌面 */
+#background-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* 模块容器层 */
+#modules-container {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 模块基础样式 */
+.module {
+  position: absolute;
+  pointer-events: auto;
+  border-radius: var(--module-radius);
+  background-color: rgba(var(--bg-rgb), var(--bg-opacity));
+  backdrop-filter: blur(var(--blur-strength));
+  -webkit-backdrop-filter: blur(var(--blur-strength));
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  min-height: 100px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
+  /* 亚克力降级方案 */
+  @supports not (backdrop-filter: blur(1px)) {
+    background-color: rgba(var(--bg-rgb), 0.85);
+  }
+}
+
+/* 模块标题栏 */
+.module-titlebar {
+  height: var(--titlebar-height);
   display: flex;
   align-items: center;
-  justify-content: center;
-  transition: background var(--transition-fast), color var(--transition-fast);
-}
-
-.titlebar-btn:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.titlebar-btn#btn-close:hover {
-  background: #e81123;
-  color: white;
-}
-
-/* ─── Main Layout ─── */
-#main-layout {
-  flex: 1;
-  display: flex;
-  overflow: hidden;
-}
-
-/* ─── Sidebar ─── */
-#sidebar {
-  width: var(--sidebar-width);
-  background: var(--bg-secondary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
-}
-
-.sidebar-section {
-  padding: 12px;
-}
-
-.sidebar-section h3 {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-muted);
-  margin-bottom: 8px;
-}
-
-#partition-list {
-  list-style: none;
-}
-
-.partition-item {
-  padding: 8px 12px;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary);
-  transition: background var(--transition-fast), color var(--transition-fast);
-  margin-bottom: 2px;
-}
-
-.partition-item:hover {
-  background: var(--bg-tertiary);
-  color: var(--text-primary);
-}
-
-.partition-item.active {
-  background: var(--accent-color);
-  color: white;
-}
-
-/* ─── Monitor Panel ─── */
-#monitor-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.monitor-item {
-  display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 6px 10px;
-  background: var(--bg-tertiary);
-  border-radius: var(--radius-sm);
-  font-size: 12px;
+  padding: 0 12px;
+  cursor: grab;
+  user-select: none;
+  font-size: 13px;
+  color: #333;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+  flex-shrink: 0;
 }
 
-.monitor-label {
-  color: var(--text-muted);
-  font-weight: 500;
+.module-titlebar:active {
+  cursor: grabbing;
 }
 
-.monitor-value {
-  color: var(--text-primary);
+.module-title {
   font-weight: 600;
-  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-/* ─── Content Area ─── */
-#content {
+/* 模块内容区 */
+.module-content {
   flex: 1;
-  padding: 16px;
-  overflow-y: auto;
+  overflow: auto;
+  padding: 12px;
+  position: relative;
 }
 
-/* ─── Desktop Icons View ─── */
-#desktop-view {
-  min-height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+/* 缩放手柄 */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  cursor: nwse-resize;
+  z-index: 10;
 }
 
-.empty-state {
-  text-align: center;
-  color: var(--text-muted);
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid rgba(0, 0, 0, 0.3);
+  border-bottom: 2px solid rgba(0, 0, 0, 0.3);
 }
 
-.empty-state p {
-  margin-bottom: 4px;
+/* 贴靠占位指示 */
+.module.docked {
+  border-radius: 0;
 }
 
-.empty-state .hint {
-  font-size: 12px;
-  color: var(--text-muted);
-  opacity: 0.6;
+/* Status indicator */
+.status-indicator {
+  position: fixed;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: #999;
+  font-size: 13px;
+  z-index: 100;
+  pointer-events: none;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 4px 14px;
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
 }
 
-/* ─── Scrollbar Styling ─── */
+/* 滚动条样式 */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -258,29 +151,6 @@ html, body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(128, 128, 128, 0.2);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(128, 128, 128, 0.4);
-}
-
-@media (prefers-color-scheme: dark) {
-  ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.15);
-  }
-  ::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.25);
-  }
-}
-
-/* ─── Animations ─── */
-.fade-in {
-  animation: fadeIn var(--transition-normal) ease forwards;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
 }

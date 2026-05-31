@@ -1,0 +1,9 @@
+.demo-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #555;
+  font-size: 14px;
+  user-select: none;
+}

@@ -1,0 +1,25 @@
+export const DEFAULT = {
+  MODULE: {
+    WIDTH: 320,
+    HEIGHT: 240,
+    MIN_WIDTH: 150,
+    MIN_HEIGHT: 100,
+    SNAP_THRESHOLD: 50,
+    DOCK_Y_OFFSET: 80, // 贴靠到左右侧边栏时的 Y 偏移
+    BLUR_STRENGTH: 20,
+    BG_OPACITY: 0.6,
+    BG_RGB: '255, 255, 255',
+  },
+  POLL: {
+    DESKTOP_INTERVAL: 300,
+    SYSTEM_STATS_INTERVAL: 1000,
+    PROCESS_LIST_INTERVAL: 500,
+  },
+  WINDOW: {
+    FULLSCREEN: true,
+    TRANSPARENT: true,
+    DECORATIONS: false,
+  },
+  GLOBAL_SHORTCUT: 'Ctrl+Shift+D',
+  DEV_OVERLAY_INTERVAL: 2000,
+} as const;

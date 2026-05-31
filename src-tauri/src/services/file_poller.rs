@@ -151,7 +151,7 @@ pub fn get_desktop_path() -> Result<PathBuf, String> {
     }
     // Fallback: SystemDrive\Users\Default\Desktop
     if let Ok(system_drive) = std::env::var("SystemDrive") {
-        let path = PathBuf::from(&system_drive).join("\\Users\\Default\\Desktop");
+        let path = PathBuf::from(&system_drive).join("Users/Default/Desktop");
         if path.exists() {
             return Ok(path);
         }

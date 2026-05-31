@@ -74,7 +74,7 @@ pub fn run() {
                     }
                     println!("[DesktopBox] Global shortcut Ctrl+Shift+D triggered");
                     if let Some(window) = handle.get_webview_window("main") {
-                        let _ = commands::window::toggle_modules_visibility(window);
+                        commands::window::toggle_modules_visibility(window);
                     }
                 },
             );

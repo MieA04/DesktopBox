@@ -47,7 +47,10 @@
       "Bash(echo \"EXIT_CODE=$?\")",
       "Bash(findstr /i \"warning error\")",
       "Bash(findstr /V \"Compiling Checking\")",
-      "Bash(git commit -m 'fix: 移除死代码消除 Rust 编译警告 *)"
+      "Bash(git commit -m 'fix: 移除死代码消除 Rust 编译警告 *)",
+      "Bash(git -C \"D:/program/desktopBox/.claude/worktrees/agent-a56ea3d6eddf04ce3/\" rev-parse --show-toplevel)",
+      "Bash(cargo clippy *)",
+      "Bash(git commit -m 'fix: QA复审问题修复 *)"
     ],
     "additionalDirectories": [
       "D:\\program\\_desktopbox_init",

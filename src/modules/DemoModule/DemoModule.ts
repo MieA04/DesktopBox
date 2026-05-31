@@ -99,5 +99,6 @@ export class DemoModule extends ModuleBase {
     };
 
     this.resizeHandle.addEventListener('pointerdown', onResizeStart);
+    this.boundHandlers.push({ el: this.resizeHandle, type: 'pointerdown', handler: onResizeStart as EventListener });
   }
 }

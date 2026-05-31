@@ -1,0 +1,70 @@
+.process-filter {
+  padding: 0 0 8px 0;
+}
+
+.process-search-input {
+  width: 100%;
+  padding: 6px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #e0e0e0;
+  font-size: 13px;
+  outline: none;
+}
+
+.process-search-input::placeholder {
+  color: #888;
+}
+
+.process-search-input:focus {
+  border-color: rgba(100, 181, 246, 0.5);
+}
+
+.process-table-wrapper {
+  height: calc(100% - 36px);
+  overflow-y: auto;
+}
+
+.process-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.process-header th {
+  padding: 6px 8px;
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  color: #999;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  background: rgba(0, 0, 0, 0.15);
+  backdrop-filter: blur(4px);
+}
+
+.process-header th:hover {
+  color: #e0e0e0;
+}
+
+.process-header th.sorted-asc::after,
+.process-header th.sorted-desc::after {
+  content: attr(data-arrow);
+  margin-left: 4px;
+  font-size: 10px;
+}
+
+.process-row td {
+  padding: 4px 8px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: #ccc;
+  white-space: nowrap;
+}
+
+.process-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+}

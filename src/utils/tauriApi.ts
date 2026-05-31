@@ -17,6 +17,23 @@ export interface DesktopChangePayload {
   is_full: boolean;
 }
 
+export interface SystemStats {
+  cpu_usage: number;
+  gpu_usage: number | null;
+  memory_used: number;
+  memory_total: number;
+  processes: number;
+  uptime: number;
+  timestamp: number;
+}
+
+export interface ProcessInfo {
+  pid: number;
+  name: string;
+  cpu_usage: number;
+  memory_usage: number;
+}
+
 // ── API ──
 
 export const api = {
@@ -37,4 +54,12 @@ export const events = {
   // M2a: Listen for real-time desktop file changes from FilePoller
   onDesktopFiles: (cb: (payload: DesktopChangePayload) => void) =>
     listen<DesktopChangePayload>('desktop:files', e => cb(e.payload)),
+
+  // M3: System resource monitoring
+  onSystemStats: (cb: (stats: SystemStats) => void) =>
+    listen<SystemStats>('system:stats', e => cb(e.payload)),
+
+  // M3: Process list
+  onProcessList: (cb: (processes: ProcessInfo[]) => void) =>
+    listen<ProcessInfo[]>('system:processes', e => cb(e.payload)),
 };

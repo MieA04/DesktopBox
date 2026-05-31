@@ -1,5 +1,6 @@
 import { signal, computed, ReadonlySignal } from '@preact/signals';
 import { Position, Size, DockState } from './ModuleBase';
+import { SystemStats, ProcessInfo } from '../utils/tauriApi';
 
 export interface ModuleState {
   id: string;
@@ -32,9 +33,42 @@ class AppState {
   activeModuleId = signal<string | null>(null);
   settings = signal<AppSettings>(DEFAULT_SETTINGS);
 
+  // M3: System monitoring state
+  systemStats = signal<SystemStats | null>(null);
+  processList = signal<ProcessInfo[]>([]);
+  searchQuery = signal<string>('');
+  sortColumn = signal<string | null>(null);
+  sortDirection = signal<'asc' | 'desc'>('asc');
+
   activeModule: ReadonlySignal<ModuleState | undefined> = computed(() =>
     this.modules.value.find(m => m.id === this.activeModuleId.value),
   );
+
+  // M3: Filtered and sorted process list (reactive)
+  filteredProcesses: ReadonlySignal<ProcessInfo[]> = computed(() => {
+    let list = this.processList.value;
+    // Search filter
+    const q = this.searchQuery.value.toLowerCase();
+    if (q) {
+      list = list.filter(p => p.name.toLowerCase().includes(q));
+    }
+    // Sort
+    const col = this.sortColumn.value;
+    const dir = this.sortDirection.value;
+    if (col) {
+      list = [...list].sort((a, b) => {
+        let cmp = 0;
+        switch (col) {
+          case 'name': cmp = a.name.localeCompare(b.name); break;
+          case 'pid': cmp = a.pid - b.pid; break;
+          case 'cpu': cmp = a.cpu_usage - b.cpu_usage; break;
+          case 'memory': cmp = a.memory_usage - b.memory_usage; break;
+        }
+        return dir === 'asc' ? cmp : -cmp;
+      });
+    }
+    return list;
+  });
 
   updateModuleState(id: string, partial: Partial<ModuleState>): void {
     this.modules.value = this.modules.value.map(m =>

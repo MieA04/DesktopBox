@@ -17,9 +17,7 @@ export class ModuleManager {
   private instances: Map<string, ModuleBase> = new Map();
   private container: HTMLElement | null = null;
 
-  // 引用计数方案：hideCounts > 0 表示模块被外部隐藏，baseVisibility 记录基线可见性
-  private hideCounts: Map<string, number> = new Map();
-  private baseVisibility: Map<string, boolean> = new Map();
+  // 模块可见性使用纯 toggle 方案，不依赖引用计数
 
   private debouncedSaveLayout = debounce(async () => {
     await this.saveLayout();
@@ -135,30 +133,9 @@ export class ModuleManager {
 
   // ── Module visibility control [REQ-SYS-003] ──
 
-  /**
-   * 根据计数器和基线可见性，将模块的 DOM 可见性与期望状态对齐。
-   * 不依赖边界检查，而是绝对状态再同步。
-   */
-  private syncVisibility(module: ModuleBase): void {
-    const id = module.id;
-    const count = this.hideCounts.get(id) ?? 0;
-    const base = this.baseVisibility.get(id) ?? true;
-
-    if (count === 0) {
-      if (base && !module.getState().visible) {
-        module.show();
-      } else if (!base && module.getState().visible) {
-        module.hide();
-      }
-    } else {
-      if (module.getState().visible) {
-        module.hide();
-      }
-    }
-  }
-
   /** Toggle visibility of specified modules (Ctrl+Shift+F: independent, bypasses counter) */
   toggleModules(ids: string[]): void {
+    console.log(`[ModuleManager] toggleModules: ids=${JSON.stringify(ids)}`);
     const targetModules = ids.map(id => this.instances.get(id)).filter(Boolean) as ModuleBase[];
     targetModules.forEach(module => {
       if (module.getState().visible) {
@@ -173,11 +150,16 @@ export class ModuleManager {
 
   /** Toggle visibility of all modules except those in excludeIds */
   toggleModulesExcept(excludeIds: string[]): void {
+    console.log(`[ModuleManager] toggleModulesExcept: exclude=${JSON.stringify(excludeIds)}`);
     this.instances.forEach((module, id) => {
       if (excludeIds.includes(id)) return;
-      const cur = this.hideCounts.get(id) ?? 0;
-      this.hideCounts.set(id, cur > 0 ? 0 : cur + 1);
-      this.syncVisibility(module);
+      if (module.getState().visible) {
+        console.log(`[ModuleManager]   hiding module "${id}"`);
+        module.hide();
+      } else {
+        console.log(`[ModuleManager]   showing module "${id}"`);
+        module.show();
+      }
     });
   }
 
@@ -213,13 +195,6 @@ export class ModuleManager {
       if (!saved.visible) instance.hide(); else instance.show();
     });
 
-    // 重新加载布局后重置引用计数器（快捷键触发状态不可跨会话保持）
-    this.hideCounts.clear();
-    this.baseVisibility.clear();
-    this.instances.forEach((module, id) => {
-      this.hideCounts.set(id, 0);
-      this.baseVisibility.set(id, module.getState().visible);
-    });
   }
 }
 

@@ -145,11 +145,13 @@ async function main() {
 
   // Listen for Ctrl+Shift+F → toggle only icon-box visibility [REQ-SYS-007]
   await listen<void>('app:toggle-icon-box', () => {
+    console.log('[main] Received app:toggle-icon-box event (Ctrl+Shift+F)');
     moduleManager.toggleModules(['icon-box']);
   });
 
   // M4.6: Listen for Ctrl+Shift+H → toggle all modules except icon-box [REQ-SYS-009]
   await listen<void>('app:toggle-others', () => {
+    console.log('[main] Received app:toggle-others event (Ctrl+Shift+H)');
     moduleManager.toggleModulesExcept(['icon-box']);
   });
 

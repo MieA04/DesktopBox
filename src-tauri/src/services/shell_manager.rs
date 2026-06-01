@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 use std::io::{BufReader, Read, Write};
+use std::os::windows::process::CommandExt;
 use std::process::{ChildStdin, Command, Stdio};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::thread;
@@ -7,6 +8,10 @@ use std::thread;
 use tauri::{AppHandle, Emitter};
 
 use crate::types::messages::{ShellExitPayload, ShellOutputPayload};
+
+/// Windows API constant to create a process without a visible console window.
+#[cfg(windows)]
+const CREATE_NO_WINDOW: u32 = 0x08000000;
 
 /// Convert bytes from the system's active code page (e.g. CP936/GBK on Chinese Windows)
 /// to a Rust String.  Falls back to UTF-8 lossy if the WinAPI call fails.
@@ -110,6 +115,7 @@ impl ShellManager {
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped())
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map_err(|e| format!("Failed to spawn cmd.exe: {e}"))?;
 

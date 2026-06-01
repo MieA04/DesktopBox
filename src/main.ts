@@ -159,15 +159,6 @@ async function main() {
   if (import.meta.env.DEV) {
     createDevOverlay();
   }
-
-  // Show ready indicator
-  const appEl = document.getElementById('app');
-  if (appEl) {
-    const indicator = document.createElement('div');
-    indicator.textContent = 'DesktopBox 已就绪 Ctrl+Shift+D 切换显隐';
-    indicator.className = 'status-indicator';
-    appEl.appendChild(indicator);
-  }
 }
 
 main().catch(console.error);

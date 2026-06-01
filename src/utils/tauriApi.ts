@@ -34,6 +34,15 @@ export interface ProcessInfo {
   memory_usage: number;
 }
 
+// M4.5: Shortcut binding
+export interface ShortcutBinding {
+  id: string;
+  keys: string;
+  command: string;
+  args: string[];
+  label?: string;
+}
+
 // M4: Shell output / exit payloads
 export interface ShellOutputPayload {
   session_id: string;
@@ -63,6 +72,14 @@ export const api = {
   resizeShell: (sessionId: string, cols: number, rows: number) =>
     invoke<void>('resize_shell', { sessionId, cols, rows }),
   killShell: (sessionId: string) => invoke<void>('kill_shell', { sessionId }),
+
+  // M4.5: Icon extraction [REQ-ICON-008]
+  extractIcon: (path: string, size?: number) =>
+    invoke<string>('extract_icon', { path, size: size ?? 32 }),
+
+  // M4.5: Shortcut binding config [REQ-SYS-008]
+  registerShortcuts: (bindings: ShortcutBinding[]) =>
+    invoke<void>('register_shortcuts', { bindings }),
 };
 
 // ── Events ──

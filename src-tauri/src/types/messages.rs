@@ -1,5 +1,16 @@
 use serde::{Serialize, Deserialize};
 
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ShortcutBinding {
+    pub id: String,
+    pub keys: String,
+    pub command: String,
+    #[serde(default)]
+    pub args: Vec<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub label: Option<String>,
+}
+
 #[derive(Serialize, Deserialize, Clone)]
 pub struct FileEntry {
     pub name: String,

@@ -51,7 +51,7 @@ export class MonitorPanel extends ModuleBase {
   }
 
   init(): void {
-    this.createTitleBar();
+    this.createDragHandle();
     this.renderContent();
     this.createResizeHandle();
 
@@ -64,17 +64,6 @@ export class MonitorPanel extends ModuleBase {
     }) as EventListener;
     this.container.addEventListener('pointerdown', bringToFront);
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
-
-    // Double-click titlebar to un-dock
-    const onDblClick = (() => {
-      if (this.getState().dock !== 'none') {
-        this.setDock('none');
-      }
-    }) as EventListener;
-    this.titleBar?.addEventListener('dblclick', onDblClick);
-    if (this.titleBar) {
-      this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
-    }
 
     // Subscribe to systemStats signal for reactive card updates
     this.unsubStats = appState.systemStats.subscribe((stats) => {
@@ -139,6 +128,9 @@ export class MonitorPanel extends ModuleBase {
     this.gpuCard = new MetricCard(this.grid, 'GPU', '%');
     this.memoryCard = new MetricCard(this.grid, '内存', '');
     this.timeCard = new MetricCard(this.grid, '系统时间', '');
+
+    // M5: 设置按钮添加到内容区
+    this.addSettingsButtonTo(this.contentArea);
   }
 
   // ── Private ──

@@ -1,4 +1,5 @@
 pub mod file_poller;
+pub mod icon_extractor;
 pub mod shell_manager;
 pub mod system_monitor;
 

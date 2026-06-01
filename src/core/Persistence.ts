@@ -5,6 +5,7 @@ export const STORAGE_KEYS = {
   APP_SETTINGS: 'app-settings',
   ICON_ORDER: 'icon-order',
   CUSTOM_COMMANDS: 'custom-commands',
+  SHORTCUTS: 'shortcuts',
 } as const;
 
 export class Persistence {

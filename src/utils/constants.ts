@@ -8,7 +8,7 @@ export const DEFAULT = {
     DOCK_Y_OFFSET: 80, // 贴靠到左右侧边栏时的 Y 偏移
     BLUR_STRENGTH: 20,
     BG_OPACITY: 0.6,
-    BG_RGB: '255, 255, 255',
+    BG_RGB: '240, 240, 245',
   },
   POLL: {
     DESKTOP_INTERVAL: 300,

@@ -2,9 +2,8 @@
 :root {
   --blur-strength: 20px;
   --bg-opacity: 0.6;
-  --bg-rgb: 255, 255, 255;
-  --module-radius: 8px;
-  --titlebar-height: 32px;
+  --bg-rgb: 240, 240, 245;
+  /* --module-radius and --titlebar-height removed in M5 */
 }
 
 /* 全局重置 */
@@ -44,50 +43,53 @@ html, body {
   z-index: 1;
 }
 
-/* 模块基础样式 */
+/* 模块基础样式 (Task 7: 背景透明度分离至 ::before) */
 .module {
   position: absolute;
   pointer-events: auto;
-  border-radius: var(--module-radius);
-  background-color: rgba(var(--bg-rgb), var(--bg-opacity));
-  backdrop-filter: blur(var(--blur-strength));
-  -webkit-backdrop-filter: blur(var(--blur-strength));
+  background: transparent;
+  isolation: isolate;
   z-index: 1;
   display: flex;
   flex-direction: column;
   min-width: 150px;
   min-height: 100px;
   box-shadow: 0 2px 16px rgba(0, 0, 0, 0.1);
-  /* 亚克力降级方案 */
-  @supports not (backdrop-filter: blur(1px)) {
+}
+
+/* Task 7: ::before 伪元素承载亚克力背景，不干扰模块内容与 transform 定位 */
+.module::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background-color: rgba(var(--bg-rgb), var(--bg-opacity));
+  backdrop-filter: blur(var(--blur-strength));
+  -webkit-backdrop-filter: blur(var(--blur-strength));
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* 亚克力降级方案：不支持 backdrop-filter 时用更高不透明度纯色 */
+@supports not (backdrop-filter: blur(1px)) {
+  .module::before {
     background-color: rgba(var(--bg-rgb), 0.85);
   }
 }
 
-/* 模块标题栏 */
-.module-titlebar {
-  height: var(--titlebar-height);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
+/* 模块拖拽手柄（M5: 替代标题栏） */
+.module-drag-handle {
+  height: 24px;
   cursor: grab;
   user-select: none;
-  font-size: 13px;
-  color: #333;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+  background: transparent;
 }
 
-.module-titlebar:active {
+.module-drag-handle:active {
   cursor: grabbing;
-}
-
-.module-title {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* 模块内容区 */
@@ -118,11 +120,6 @@ html, body {
   height: 8px;
   border-right: 2px solid rgba(0, 0, 0, 0.3);
   border-bottom: 2px solid rgba(0, 0, 0, 0.3);
-}
-
-/* 贴靠占位指示 */
-.module.docked {
-  border-radius: 0;
 }
 
 /* Status indicator */
@@ -199,7 +196,7 @@ html, body {
 
 .settings-panel {
   position: absolute;
-  top: 32px;
+  top: 24px;
   right: 4px;
   background: rgba(30, 30, 30, 0.95);
   border-radius: 8px;

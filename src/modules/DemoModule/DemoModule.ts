@@ -13,7 +13,7 @@ export class DemoModule extends ModuleBase {
   }
 
   init(): void {
-    this.createTitleBar();
+    this.createDragHandle();
     this.renderContent();
     this.createResizeHandle();
 
@@ -26,17 +26,6 @@ export class DemoModule extends ModuleBase {
     }) as EventListener;
     this.container.addEventListener('pointerdown', bringToFront);
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
-
-    // Double-click titlebar to un-dock
-    const onDblClick = ((() => {
-      if (this.getState().dock !== 'none') {
-        this.setDock('none');
-      }
-    }) as EventListener);
-    this.titleBar?.addEventListener('dblclick', onDblClick);
-    if (this.titleBar) {
-      this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
-    }
   }
 
   destroy(): void {
@@ -44,6 +33,6 @@ export class DemoModule extends ModuleBase {
   }
 
   protected renderContent(): void {
-    this.contentArea.innerHTML = '<div class="demo-content">拖拽标题栏移动 · 右下角缩放手柄调整大小</div>';
+    this.contentArea.innerHTML = '<div class="demo-content">拖拽手柄移动 · 右下角缩放手柄调整大小</div>';
   }
 }

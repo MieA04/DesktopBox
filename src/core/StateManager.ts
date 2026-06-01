@@ -1,5 +1,5 @@
 import { signal, computed, ReadonlySignal } from '@preact/signals';
-import { Position, Size, DockState } from './ModuleBase';
+import { Position, Size } from './ModuleBase';
 import { SystemStats, ProcessInfo } from '../utils/tauriApi';
 
 export interface ModuleState {
@@ -7,7 +7,6 @@ export interface ModuleState {
   title: string;
   position: Position;
   size: Size;
-  dock: DockState;
   zIndex: number;
   visible: boolean;
   opacity: number;

@@ -17,6 +17,10 @@ export class ModuleManager {
   private instances: Map<string, ModuleBase> = new Map();
   private container: HTMLElement | null = null;
 
+  // Task 5: 全局显隐状态机，区分 Ctrl+Shift+D（全隐藏/恢复）和 Ctrl+Shift+F（独立切换）
+  private isGlobalHidden = false;
+  private preGlobalHideVisibility: Map<string, boolean> = new Map();
+
   private debouncedSaveLayout = debounce(async () => {
     await this.saveLayout();
   }, 500);
@@ -133,17 +137,39 @@ export class ModuleManager {
 
   /** Toggle visibility of all modules, or specific modules by ID */
   toggleModules(ids?: string[]): void {
-    const targetModules = ids && ids.length > 0
-      ? ids.map(id => this.instances.get(id)).filter(Boolean) as ModuleBase[]
-      : Array.from(this.instances.values());
+    if (ids && ids.length > 0) {
+      // Ctrl+Shift+F 路径：独立切换指定模块
+      const targetModules = ids.map(id => this.instances.get(id)).filter(Boolean) as ModuleBase[];
+      targetModules.forEach(module => {
+        if (module.getState().visible) {
+          module.hide();
+        } else {
+          module.show();
+        }
+      });
+      return;
+    }
 
-    targetModules.forEach(module => {
-      if (module.getState().visible) {
+    // Ctrl+Shift+D 路径：全局显隐状态机
+    if (!this.isGlobalHidden) {
+      // 快照当前所有模块可见性，然后全部隐藏
+      this.preGlobalHideVisibility.clear();
+      this.instances.forEach((module, id) => {
+        this.preGlobalHideVisibility.set(id, module.getState().visible);
         module.hide();
-      } else {
-        module.show();
-      }
-    });
+      });
+      this.isGlobalHidden = true;
+    } else {
+      // 按快照恢复每个模块的显示状态（IconBox 保持其被 Ctrl+Shift+F 独立隐藏的状态）
+      this.instances.forEach((module, id) => {
+        const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
+        if (wasVisible) {
+          module.show();
+        }
+      });
+      this.preGlobalHideVisibility.clear();
+      this.isGlobalHidden = false;
+    }
   }
 
   /** Show a specific module by ID */
@@ -185,9 +211,12 @@ export class ModuleManager {
       instance.setZIndex(saved.zIndex);
       instance.setBlurStrength(saved.blurStrength);
       instance.setBgOpacity(saved.opacity);
-      if (saved.dock !== 'none') instance.setDock(saved.dock);
       if (!saved.visible) instance.hide(); else instance.show();
     });
+
+    // Task 5: 同步 isGlobalHidden 状态——如果所有模块都是隐藏的，标记全局隐藏
+    const allHidden = Array.from(this.instances.values()).every(m => !m.getState().visible);
+    this.isGlobalHidden = allHidden;
   }
 }
 

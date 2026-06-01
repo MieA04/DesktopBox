@@ -95,7 +95,7 @@ export class TerminalView extends ModuleBase {
   }
 
   init(): void {
-    this.createTitleBar();
+    this.createDragHandle();
     this.renderContent();
     this.createResizeHandle();
 
@@ -108,17 +108,6 @@ export class TerminalView extends ModuleBase {
     }) as EventListener;
     this.container.addEventListener('pointerdown', bringToFront);
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
-
-    // Double-click titlebar to un-dock
-    const onDblClick = (() => {
-      if (this.getState().dock !== 'none') {
-        this.setDock('none');
-      }
-    }) as EventListener;
-    this.titleBar?.addEventListener('dblclick', onDblClick);
-    if (this.titleBar) {
-      this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
-    }
 
     // Kick off async initialization
     // IMPORTANT: listenShellEvents() BEFORE initShell() to avoid race —
@@ -187,6 +176,9 @@ export class TerminalView extends ModuleBase {
 
     // Custom commands bar (bottom of module)
     this.customCommands = new CustomCommands(this.contentArea, this);
+
+    // M5: 设置按钮添加到内容区
+    this.addSettingsButtonTo(this.contentArea);
   }
 
   // ── Settings API (used by Task 7) ──

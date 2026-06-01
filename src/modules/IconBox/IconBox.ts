@@ -13,7 +13,6 @@ const ICON_BOX = {
   DRAG_THRESHOLD: 5,
   MIRROR_Z_INDEX: '9999',
   MIRROR_OPACITY: '0.7',
-  MIRROR_SCALE: '1.1',
   PLACEHOLDER_OPACITY: '0.3',
 } as const;
 
@@ -33,6 +32,16 @@ interface DragReorderState {
 
 export class IconBox extends ModuleBase {
   private iconCache: Map<string, HTMLElement> = new Map();
+  /** M4.5: 缓存已加载的真实图标 data URL [REQ-ICON-008] */
+  private iconDataUrlCache: Map<string, string> = new Map();
+  /** M5: 图标提取分辨率（提取为固定大尺寸，CSS缩放至显示尺寸） */
+  private iconSize = 48;
+  /** M4.5: 显隐动画进行中标志 [REQ-FRM-010] */
+  private isAnimating = false;
+  /** M4.5: 动画时长（ms） */
+  private readonly ANIM_DURATION = 250;
+  /** [FIX #4] 追踪当前动画 setTimeout ID，防止新旧动画交叉覆盖 */
+  private animationTimer: ReturnType<typeof setTimeout> | null = null;
   private grid: HTMLElement | null = null;
   private unlistenDesktopFiles: (() => void) | null = null;
   /** 存储 listen() 返回的 Promise，防止 destroy() 与 Promise resolve 竞态（R5） */
@@ -46,14 +55,14 @@ export class IconBox extends ModuleBase {
 
   constructor() {
     super('icon-box', '图标收纳盒', {
-      size: { width: 480, height: 400 },
+      size: { width: 640, height: 400 },
       opacity: 0.6,
       blurStrength: 20,
     });
   }
 
   init(): void {
-    this.createTitleBar();
+    this.createDragHandle();
     this.renderContent();
     this.createResizeHandle();
 
@@ -66,17 +75,6 @@ export class IconBox extends ModuleBase {
     }) as EventListener;
     this.container.addEventListener('pointerdown', bringToFront);
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
-
-    // Double-click titlebar to un-dock
-    const onDblClick = ((() => {
-      if (this.getState().dock !== 'none') {
-        this.setDock('none');
-      }
-    }) as EventListener);
-    this.titleBar?.addEventListener('dblclick', onDblClick);
-    if (this.titleBar) {
-      this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
-    }
 
     // M2b-#1: Set up ResizeObserver for auto-arrange
     if (this.grid) {
@@ -114,6 +112,7 @@ export class IconBox extends ModuleBase {
       this.grid.innerHTML = '';
     }
     this.iconCache.clear();
+    this.iconDataUrlCache.clear();
 
     // Unlisten desktop files event 及竞态处理（R5）
     if (this.unlistenDesktopFiles) {
@@ -124,10 +123,72 @@ export class IconBox extends ModuleBase {
     }
   }
 
+  // ── M4.5: 显隐动画 [REQ-FRM-010] (Task 2: 使用 marginTop 而非 transform, 避免覆盖 position) ──
+
+  show(): void {
+    if (this.isAnimating) {
+      // [FIX #4] Cancel stale animation timer before shortcutting
+      if (this.animationTimer !== null) {
+        clearTimeout(this.animationTimer);
+        this.animationTimer = null;
+      }
+      this.isAnimating = false;
+      super.show();
+      return;
+    }
+    this.isAnimating = true;
+    this.state = { ...this.state, visible: true };
+    this.container.style.display = 'flex';
+    // 从底部弹入：使用 marginTop 而非 transform，避免与 position 的 translate 冲突
+    this.container.style.transition = 'none';
+    this.container.style.marginTop = '300px';
+    this.container.style.opacity = '0';
+    // eslint-disable-next-line @typescript-eslint/no-unused-expressions
+    this.container.offsetHeight; // 强制回流
+
+    this.container.style.transition = `margin-top ${this.ANIM_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${this.ANIM_DURATION}ms ease-out`;
+    this.container.style.marginTop = '';
+    this.container.style.opacity = '';
+
+    this.animationTimer = setTimeout(() => {
+      this.container.style.transition = '';
+      this.isAnimating = false;
+      this.animationTimer = null;
+    }, this.ANIM_DURATION);
+  }
+
+  hide(): void {
+    if (this.isAnimating) {
+      // [FIX #4] Cancel stale animation timer before shortcutting
+      if (this.animationTimer !== null) {
+        clearTimeout(this.animationTimer);
+        this.animationTimer = null;
+      }
+      this.isAnimating = false;
+      super.hide();
+      return;
+    }
+    this.isAnimating = true;
+    this.container.style.transition = `margin-top ${this.ANIM_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1), opacity ${this.ANIM_DURATION}ms ease-out`;
+    this.container.style.marginTop = '300px';
+    this.container.style.opacity = '0';
+
+    this.animationTimer = setTimeout(() => {
+      this.state = { ...this.state, visible: false };
+      this.container.style.display = 'none';
+      this.container.style.marginTop = '';
+      this.container.style.opacity = '';
+      this.container.style.transition = '';
+      this.isAnimating = false;
+      this.animationTimer = null;
+    }, this.ANIM_DURATION);
+  }
+
   protected renderContent(): void {
     this.grid = document.createElement('div');
     this.grid.className = 'icon-grid';
-    this.grid.style.setProperty('--grid-columns', '8');
+    this.grid.style.setProperty('--grid-columns', '10');
+    this.grid.style.setProperty('--icon-display-size', `${this.iconSize}px`);
     this.contentArea.appendChild(this.grid);
   }
 
@@ -149,9 +210,16 @@ export class IconBox extends ModuleBase {
     const availableWidth = gridWidth - padding;
     // How many whole cells fit? (last gap is unused)
     let columns = Math.floor((availableWidth + gap) / (targetCellWidth + gap));
-    columns = Math.max(6, Math.min(12, columns));
+    columns = Math.max(6, Math.min(10, columns));
 
     this.grid.style.setProperty('--grid-columns', String(columns));
+
+    // 自适应图标显示尺寸：根据实际列宽计算，上限不超过提取分辨率
+    const totalGapWidth = (columns - 1) * gap;
+    const cellWidth = (availableWidth - totalGapWidth) / columns;
+    const rawIconSize = Math.floor(cellWidth * 0.65);
+    const displaySize = Math.floor(Math.max(32, Math.min(this.iconSize, rawIconSize)));
+    this.grid.style.setProperty('--icon-display-size', `${displaySize}px`);
   }
 
   // ── M2b-#2: Drag Reorder [REQ-ICON-006] ──
@@ -206,13 +274,16 @@ export class IconBox extends ModuleBase {
   private startIconDrag(e: PointerEvent): void {
     if (!this.dragReorder) return;
 
+    // 添加 dragging class 排除悬浮效果
+    this.dragReorder.source.classList.add('dragging');
+
     // Create drag mirror — a semi-transparent clone that follows the cursor
     const mirror = this.dragReorder.source.cloneNode(true) as HTMLElement;
     mirror.style.position = 'fixed';
     mirror.style.zIndex = ICON_BOX.MIRROR_Z_INDEX;
     mirror.style.pointerEvents = 'none';
     mirror.style.opacity = ICON_BOX.MIRROR_OPACITY;
-    mirror.style.transform = `scale(${ICON_BOX.MIRROR_SCALE})`;
+    mirror.style.boxShadow = '0 8px 24px rgba(0,0,0,0.3)';
     mirror.style.width = `${this.dragReorder.source.offsetWidth}px`;
     mirror.style.left = `${e.clientX - this.dragReorder.offsetX}px`;
     mirror.style.top = `${e.clientY - this.dragReorder.offsetY}px`;
@@ -295,6 +366,8 @@ export class IconBox extends ModuleBase {
 
     // Restore source item opacity
     this.dragReorder.source.style.opacity = '';
+    // 移除 dragging class 恢复悬浮效果
+    this.dragReorder.source.classList.remove('dragging');
 
     // Clear insertion indicator
     if (this.dragReorder.targetBefore) {
@@ -327,6 +400,7 @@ export class IconBox extends ModuleBase {
         this.dragReorder.mirror.remove();
       }
       this.dragReorder.source.style.opacity = '';
+      this.dragReorder.source.classList.remove('dragging');
       if (this.dragReorder.targetBefore) {
         this.dragReorder.targetBefore.classList.remove('drag-target');
       }
@@ -421,12 +495,16 @@ export class IconBox extends ModuleBase {
     // Clear existing
     this.grid.innerHTML = '';
     this.iconCache.clear();
+    this.iconDataUrlCache.clear();
 
     files.forEach(file => {
       const item = this.createIconItem(file);
       this.grid!.appendChild(item);
       this.iconCache.set(file.path, item);
     });
+
+    // M4.5: 异步加载真实图标（不阻塞首次渲染）
+    void this.loadIcons(files);
   }
 
   private applyDiff(payload: DesktopChangePayload): void {
@@ -438,6 +516,8 @@ export class IconBox extends ModuleBase {
       if (existing) {
         existing.remove();
         this.iconCache.delete(file.path);
+        // [FIX #6] 同时清理 base64 Data URL 缓存，避免增量更新时残留
+        this.iconDataUrlCache.delete(file.path);
       }
     });
 
@@ -471,9 +551,10 @@ export class IconBox extends ModuleBase {
     item.className = 'icon-item';
     item.dataset.path = file.path;
 
-    // Icon image (placeholder for now, M2b will add icon extraction)
+    // Icon image with data-path for batch icon loading updates
     const img = document.createElement('img');
-    img.src = this.getPlaceholderIcon(file);
+    img.className = 'icon-img';
+    img.src = this.getIconSrc(file);
     img.alt = file.name;
     img.draggable = false;
 
@@ -501,14 +582,48 @@ export class IconBox extends ModuleBase {
   }
 
   private getPlaceholderIcon(file: FileEntry): string {
+    const s = this.iconSize;
     if (file.is_dir) {
       return 'data:image/svg+xml,' + encodeURIComponent(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="18" rx="2" fill="#FFD54F"/><path d="M4 10 L4 8 L12 8 L14 12 L28 12 L28 28 L4 28 Z" fill="#FFB300"/></svg>'
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 32 32"><rect x="4" y="8" width="24" height="18" rx="2" fill="#FFD54F"/><path d="M4 10 L4 8 L12 8 L14 12 L28 12 L28 28 L4 28 Z" fill="#FFB300"/></svg>`
       );
     }
     // Generic file icon
     return 'data:image/svg+xml,' + encodeURIComponent(
-      '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><path d="M6 4 L20 4 L26 10 L26 28 L6 28 Z" fill="#90CAF9"/><path d="M20 4 L20 10 L26 10 Z" fill="#64B5F6"/></svg>'
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 32 32"><path d="M6 4 L20 4 L26 10 L26 28 L6 28 Z" fill="#90CAF9"/><path d="M20 4 L20 10 L26 10 Z" fill="#64B5F6"/></svg>`
     );
+  }
+
+  // ── M4.5: Real Icon Loading [REQ-ICON-008] ──
+
+  /** 返回缓存的 data URL 或占位符 */
+  private getIconSrc(file: FileEntry): string {
+    return this.iconDataUrlCache.get(file.path) ?? this.getPlaceholderIcon(file);
+  }
+
+  /** 批量加载真实图标（batch size = 8 控制并发） */
+  private async loadIcons(files: FileEntry[]): Promise<void> {
+    const batchSize = 8;
+    for (let i = 0; i < files.length; i += batchSize) {
+      const batch = files.slice(i, i + batchSize);
+      await Promise.all(batch.map(f => this.loadSingleIcon(f)));
+    }
+  }
+
+  /** 加载单个文件图标并更新 DOM */
+  private async loadSingleIcon(file: FileEntry): Promise<void> {
+    if (this.iconDataUrlCache.has(file.path)) return;
+    try {
+      const dataUrl = await api.extractIcon(file.path, this.iconSize);
+      this.iconDataUrlCache.set(file.path, dataUrl);
+      // 更新已渲染的 DOM
+      const imgEl = this.container.querySelector(
+        `.icon-item[data-path="${CSS.escape(file.path)}"] .icon-img`
+      ) as HTMLImageElement | null;
+      if (imgEl) imgEl.src = dataUrl;
+    } catch (err) {
+      // 保留占位符，静默失败
+      console.warn(`[IconBox] Failed to load icon for ${file.name}:`, err);
+    }
   }
 }

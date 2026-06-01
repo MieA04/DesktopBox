@@ -48,7 +48,7 @@ export class ProcessTable extends ModuleBase {
   }
 
   init(): void {
-    this.createTitleBar();
+    this.createDragHandle();
     this.renderContent();
     this.createResizeHandle();
 
@@ -61,17 +61,6 @@ export class ProcessTable extends ModuleBase {
     }) as EventListener;
     this.container.addEventListener('pointerdown', bringToFront);
     this.boundHandlers.push({ el: this.container, type: 'pointerdown', handler: bringToFront });
-
-    // Double-click titlebar to un-dock
-    const onDblClick = (() => {
-      if (this.getState().dock !== 'none') {
-        this.setDock('none');
-      }
-    }) as EventListener;
-    this.titleBar?.addEventListener('dblclick', onDblClick);
-    if (this.titleBar) {
-      this.boundHandlers.push({ el: this.titleBar, type: 'dblclick', handler: onDblClick });
-    }
 
     // Subscribe to filteredProcesses computed signal for reactive row updates
     this.unsubFilteredProcesses = appState.filteredProcesses.subscribe((list) => {
@@ -152,6 +141,9 @@ export class ProcessTable extends ModuleBase {
 
     wrapper.appendChild(table);
     this.contentArea.appendChild(wrapper);
+
+    // M5: 设置按钮添加到 wrapper
+    this.addSettingsButtonTo(wrapper);
   }
 
   // ── Private ──

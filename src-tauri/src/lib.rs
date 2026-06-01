@@ -4,9 +4,10 @@ mod types;
 
 use std::sync::Mutex;
 use std::time::Duration;
-use tauri::{Manager, PhysicalSize, PhysicalPosition};
+use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
+use crate::commands::shortcut::ShortcutRegistry;
 use crate::services::file_poller::FilePoller;
 use crate::services::shell_manager::ShellManager;
 use crate::services::system_monitor::SystemMonitor;
@@ -64,6 +65,19 @@ pub fn run() {
                 },
             );
 
+            // 全局快捷键：Ctrl+Shift+F 仅隐藏图标收纳盒 [REQ-SYS-007]
+            let handle_sys007 = app.handle().clone();
+            let _ = app.global_shortcut().on_shortcut(
+                Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyF),
+                move |_app, _shortcut, event: ShortcutEvent| {
+                    if !matches!(event.state, ShortcutState::Pressed) { return; }
+                    println!("[DesktopBox] Global shortcut Ctrl+Shift+F triggered");
+                    if let Some(window) = handle_sys007.get_webview_window("main") {
+                        let _ = window.emit("app:toggle-icon-box", ());
+                    }
+                },
+            );
+
             // ── FilePoller: 实时监听桌面文件变化 ──
             // 通过 app.manage() 托管，应用退出时自动 Drop → 停止轮询线程
             let mut poller = FilePoller::new(app.handle().clone(), Duration::from_millis(300));
@@ -84,6 +98,9 @@ pub fn run() {
             // 通过 app.manage() 托管，Mutex 包裹 HashMap<String, ShellSession>
             app.manage(Mutex::new(ShellManager::new(app.handle().clone())));
 
+            // ── ShortcutRegistry: 快捷键绑定配置 [REQ-SYS-008] ──
+            app.manage(Mutex::new(ShortcutRegistry::default()));
+
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -92,11 +109,13 @@ pub fn run() {
             commands::window::set_window_downgrade,
             commands::desktop::open_file,
             commands::desktop::get_desktop_files,
+            commands::desktop::extract_icon,
             commands::system::get_system_stats,
             commands::shell::init_shell,
             commands::shell::write_stdin,
             commands::shell::resize_shell,
             commands::shell::kill_shell,
+            commands::shortcut::register_shortcuts,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

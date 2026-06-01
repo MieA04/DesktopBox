@@ -11,8 +11,6 @@ export interface Size {
   height: number;
 }
 
-export type DockState = 'none' | 'left' | 'right' | 'top' | 'bottom';
-
 export interface BoundHandler {
   el: EventTarget;
   type: string;
@@ -25,10 +23,9 @@ export abstract class ModuleBase {
   readonly container: HTMLElement;
   protected contentArea: HTMLElement;
   protected state: ModuleState;
-  protected titleBar: HTMLElement | null = null;
+  protected dragHandle: HTMLElement | null = null;
   protected resizeHandle: HTMLElement | null = null;
   protected boundHandlers: BoundHandler[] = [];
-  private preSnapSize?: Size;
 
   constructor(id: string, title: string, defaultState: Partial<Omit<ModuleState, 'id' | 'title'>>) {
     this.id = id;
@@ -40,7 +37,6 @@ export abstract class ModuleBase {
       title,
       position: { x: 0, y: 0 },
       size: { width: 320, height: 240 },
-      dock: 'none',
       zIndex: 1,
       visible: true,
       opacity: 0.6,
@@ -68,18 +64,12 @@ export abstract class ModuleBase {
 
   onActivate(): void {}
   onDeactivate(): void {}
-  protected onDockChange(_dock: DockState): void {}
 
   // ── Position / Size ──
 
   setPosition(pos: Position): void {
-    // C5: 防止模块被完全拖出屏幕——允许最多 50px 被拖出边缘
-    const clamped = {
-      x: Math.max(-this.state.size.width + 50, Math.min(pos.x, window.innerWidth - 50)),
-      y: Math.max(-this.state.size.height + 50, Math.min(pos.y, window.innerHeight - 50)),
-    };
-    this.state = { ...this.state, position: clamped };
-    this.container.style.transform = `translate(${clamped.x}px, ${clamped.y}px)`;
+    this.state = { ...this.state, position: pos };
+    this.container.style.transform = `translate(${pos.x}px, ${pos.y}px)`;
   }
 
   setSize(size: Size): void {
@@ -91,20 +81,6 @@ export abstract class ModuleBase {
   setZIndex(z: number): void {
     this.state = { ...this.state, zIndex: z };
     this.container.style.zIndex = String(z);
-  }
-
-  setDock(dock: DockState): void {
-    // Save pre-snap size when entering snap mode
-    if (dock !== 'none' && this.state.dock === 'none') {
-      this.preSnapSize = { ...this.state.size };
-    } else if (dock === 'none' && this.state.dock !== 'none' && this.preSnapSize) {
-      // Restore pre-snap size when leaving snap mode
-      this.setSize(this.preSnapSize);
-      this.preSnapSize = undefined;
-    }
-    this.state = { ...this.state, dock };
-    this.container.classList.toggle('docked', dock !== 'none');
-    this.onDockChange(dock);
   }
 
   // ── Acrylic ──
@@ -147,31 +123,24 @@ export abstract class ModuleBase {
     // 默认无操作
   }
 
-  // ── Title Bar ──
+  // ── Drag Handle ──
 
-  protected createTitleBar(): void {
-    if (this.titleBar) return;
-    this.titleBar = document.createElement('div');
-    this.titleBar.className = 'module-titlebar';
+  protected createDragHandle(): void {
+    if (this.dragHandle) return;
+    this.dragHandle = document.createElement('div');
+    this.dragHandle.className = 'module-drag-handle';
+    this.container.insertBefore(this.dragHandle, this.contentArea);
+  }
 
-    const titleSpan = document.createElement('span');
-    titleSpan.className = 'module-title';
-    titleSpan.textContent = this.title;
-
-    // 齿轮图标按钮（调用 onSettingsClick 钩子）
-    const settingsBtn = document.createElement('button');
-    settingsBtn.className = 'module-settings-btn';
-    settingsBtn.textContent = '⚙';
-    const onSettingsClick = (e: Event) => {
+  protected addSettingsButtonTo(target: HTMLElement): void {
+    const btn = document.createElement('button');
+    btn.className = 'module-settings-btn';
+    btn.textContent = '⚙';
+    btn.addEventListener('click', (e) => {
       e.stopPropagation();
       this.onSettingsClick();
-    };
-    settingsBtn.addEventListener('click', onSettingsClick);
-    this.boundHandlers.push({ el: settingsBtn, type: 'click', handler: onSettingsClick });
-
-    this.titleBar.appendChild(titleSpan);
-    this.titleBar.appendChild(settingsBtn);
-    this.container.insertBefore(this.titleBar, this.contentArea);
+    });
+    target.appendChild(btn);
   }
 
   // ── Resize Handle ──
@@ -235,9 +204,6 @@ export abstract class ModuleBase {
     this.setZIndex(this.state.zIndex);
     this.setBlurStrength(this.state.blurStrength);
     this.setBgOpacity(this.state.opacity);
-    if (this.state.dock !== 'none') {
-      this.setDock(this.state.dock);
-    }
     if (!this.state.visible) {
       this.hide();
     }

@@ -16,7 +16,8 @@
 
 .metric-label {
   font-size: 11px;
-  color: #999;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
   margin-bottom: 4px;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -31,11 +32,13 @@
 .metric-value {
   font-size: 24px;
   font-weight: 700;
-  color: #e0e0e0;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
   line-height: 1;
 }
 
 .metric-unit {
   font-size: 13px;
-  color: #999;
+  color: #ffffff;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.9);
 }

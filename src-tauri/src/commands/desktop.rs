@@ -1,5 +1,6 @@
 use std::path::Path;
 use tauri::AppHandle;
+use crate::services::icon_extractor;
 use tauri_plugin_opener::OpenerExt;
 
 use crate::services::file_poller::get_desktop_path;
@@ -57,4 +58,9 @@ pub fn get_desktop_files() -> Result<Vec<FileEntry>, String> {
     // Sort by name for consistent ordering
     files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     Ok(files)
+}
+
+#[tauri::command]
+pub fn extract_icon(path: String, size: Option<u32>) -> Result<String, String> {
+    icon_extractor::extract_icon_as_data_url(&path, size.unwrap_or(32))
 }

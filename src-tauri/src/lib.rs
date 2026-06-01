@@ -7,7 +7,6 @@ use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
 use tauri::menu::{Menu, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
-use tauri::window::{Color, Effect, EffectsBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::commands::shortcut::ShortcutRegistry;
@@ -55,14 +54,9 @@ pub fn run() {
                 if let Err(e) = window.set_always_on_bottom(true) {
                     eprintln!("[DesktopBox] Warn: failed to set always_on_bottom: {e}");
                 }
-                // 消除 DWM 残留边框：设置窗口背景效果，让 DWM 正确合成透明窗口
-                if let Err(e) = window.set_effects(
-                    EffectsBuilder::new()
-                        .effect(Effect::Blur)
-                        .color(Color(30, 30, 35, 153))  // rgba(30,30,35,0.6) 匹配 CSS 透明度
-                        .build(),
-                ) {
-                    eprintln!("[DesktopBox] Warn: failed to set window effects: {e}");
+                // 消除 DWM 伪影边框：禁用窗口阴影，避免透明无边框窗口边缘残留边框
+                if let Err(e) = window.set_shadow(false) {
+                    eprintln!("[DesktopBox] Warn: failed to set_shadow(false): {e}");
                 }
                 // 不在任务栏显示
                 if let Err(e) = window.set_skip_taskbar(true) {

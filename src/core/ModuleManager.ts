@@ -139,6 +139,29 @@ export class ModuleManager {
 
   // ── Module visibility control [REQ-SYS-003] ──
 
+  /** Restore modules hidden by the global (D) state machine */
+  private _restoreGlobal(): void {
+    if (!this.isGlobalHidden) return;
+    this.instances.forEach((module, id) => {
+      const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
+      if (wasVisible) module.show();
+    });
+    this.preGlobalHideVisibility.clear();
+    this.isGlobalHidden = false;
+  }
+
+  /** Restore modules hidden by the others (H) state machine */
+  private _restoreOthers(): void {
+    if (!this.othersHidden) return;
+    this.instances.forEach((module, id) => {
+      if (!this.preOthersVisibility.has(id)) return;
+      const wasVisible = this.preOthersVisibility.get(id) ?? true;
+      if (wasVisible) module.show();
+    });
+    this.preOthersVisibility.clear();
+    this.othersHidden = false;
+  }
+
   /** Toggle visibility of all modules, or specific modules by ID */
   toggleModules(ids?: string[]): void {
     if (ids && ids.length > 0) {
@@ -156,6 +179,8 @@ export class ModuleManager {
 
     // Ctrl+Shift+D 路径：全局显隐状态机
     if (!this.isGlobalHidden) {
+      // 如果 H 状态机处于激活态，先恢复，确保快照记录真实可见性
+      if (this.othersHidden) this._restoreOthers();
       // 快照当前所有模块可见性，然后全部隐藏
       this.preGlobalHideVisibility.clear();
       this.instances.forEach((module, id) => {
@@ -167,12 +192,12 @@ export class ModuleManager {
       // 按快照恢复每个模块的显示状态（IconBox 保持其被 Ctrl+Shift+F 独立隐藏的状态）
       this.instances.forEach((module, id) => {
         const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
-        if (wasVisible) {
-          module.show();
-        }
+        if (wasVisible) module.show();
       });
       this.preGlobalHideVisibility.clear();
       this.isGlobalHidden = false;
+      // 同时重置 H 状态机，避免两个状态机互相污染
+      this._restoreOthers();
     }
   }
 
@@ -181,6 +206,8 @@ export class ModuleManager {
   /** Toggle visibility of all modules except those in excludeIds */
   toggleModulesExcept(excludeIds: string[]): void {
     if (!this.othersHidden) {
+      // 如果 D 状态机处于激活态，先恢复，确保快照记录真实可见性
+      if (this.isGlobalHidden) this._restoreGlobal();
       // Save visibility snapshot for non-excluded modules, then hide them
       this.preOthersVisibility.clear();
       this.instances.forEach((module, id) => {
@@ -194,12 +221,12 @@ export class ModuleManager {
       this.instances.forEach((module, id) => {
         if (!this.preOthersVisibility.has(id)) return;
         const wasVisible = this.preOthersVisibility.get(id) ?? true;
-        if (wasVisible) {
-          module.show();
-        }
+        if (wasVisible) module.show();
       });
       this.preOthersVisibility.clear();
       this.othersHidden = false;
+      // 同时重置 D 状态机，避免两个状态机互相污染
+      this._restoreGlobal();
     }
   }
 

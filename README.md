@@ -4,8 +4,6 @@
 
 DesktopBox 是一个 Windows 桌面增强工具，采用 **Tauri 2 + TypeScript** 构建。它在桌面壁纸之上渲染一组半透明亚克力材质模块，提供图标管理、资源监控、进程列表和命令行终端功能，**不侵入系统桌面组件（explorer.exe）**。
 
-![架构示意图](docs/architecture.png)
-
 ---
 
 ## ✨ 功能
@@ -43,6 +41,10 @@ DesktopBox 是一个 Windows 桌面增强工具，采用 **Tauri 2 + TypeScript*
 | `Ctrl+Shift+H` | 隐藏/恢复除图标盒外的所有模块 |
 | `Ctrl+Alt+T` | 打开 Windows Terminal |
 | `Ctrl+Alt+B` | 打开 Chrome 浏览器 |
+
+### 🖱️ 系统托盘
+- 左键单击托盘图标：隐藏/唤出应用窗口
+- 右键菜单：开机自启动开关、关闭 DesktopBox
 
 ### 🎨 UI 特性
 - 全屏透明无边框窗口，桌面壁纸完全可见
@@ -142,9 +144,8 @@ desktopBox/
 │           ├── file_poller.rs    # 文件轮询
 │           ├── shell_manager.rs  # Shell 会话管理
 │           └── system_monitor.rs # 系统数据采集
-├── 功能需求文档.md               # 需求规格
-├── 架构设计文档.md               # 架构设计
-└── 项目计划文档.md               # 项目计划
+├── CLAUDE.md                     # AI 开发守则
+└── README.md                     # 项目说明
 ```
 
 ---
@@ -206,9 +207,10 @@ cargo check         # Rust 编译检查
 | M5 | 标题栏移除 + 字体视觉重构 | ✅ |
 | M6 | 应用隐藏/唤出 + 系统托盘 | ✅ |
 | M4.6 | 隐藏其他模块快捷键 | ✅ |
+| M4.7 | 系统托盘右键菜单 + 开机自启动 | ✅ |
 | M7+ | 图标分区、模块独立配置、配置导入/导出等 | ⏳ 后期迭代 |
 
-详细需求与计划见 [功能需求文档.md](功能需求文档.md)、[架构设计文档.md](架构设计文档.md)、[项目计划文档.md](项目计划文档.md)。
+详细需求与计划见项目计划文档。
 
 ---
 

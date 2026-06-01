@@ -1,1 +1,0 @@
-- [Development Process v2](development-process-v2.md) — 多智能体团队6角色分工（2026-06-01）

@@ -461,10 +461,19 @@ export class IconBox extends ModuleBase {
   private listenDesktopFiles(): void {
     const unlisten = events.onDesktopFiles((payload: DesktopChangePayload) => {
       if (payload.is_full) {
+        console.log(`[IconBox] Full sync: ${payload.added.length} files from FilePoller`);
+        if (payload.added.length > 0) {
+          console.log(`[IconBox]   first file: ${payload.added[0].name} @ ${payload.added[0].path}`);
+        }
         this.renderFullList(payload.added);
-        // M2b-#4: Re-apply saved icon order after full list refresh
         void this.loadIconOrder();
       } else {
+        if (payload.added.length > 0) {
+          console.log(`[IconBox] Diff: +${payload.added.length}`, payload.added.map(f => f.name));
+        }
+        if (payload.removed.length > 0) {
+          console.log(`[IconBox] Diff: -${payload.removed.length}`, payload.removed.map(f => f.name));
+        }
         this.applyDiff(payload);
       }
     });
@@ -481,6 +490,10 @@ export class IconBox extends ModuleBase {
   private async loadInitialFiles(): Promise<void> {
     try {
       const files = await api.getDesktopFiles();
+      console.log(`[IconBox] Initial load: ${files.length} files via get_desktop_files`);
+      if (files.length > 0) {
+        console.log(`[IconBox]   first: ${files[0].name} @ ${files[0].path}`);
+      }
       this.renderFullList(files);
       // M2b-#4: Apply saved icon order after initial load
       await this.loadIconOrder();

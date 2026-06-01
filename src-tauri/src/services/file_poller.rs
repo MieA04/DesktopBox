@@ -78,6 +78,8 @@ impl AppService for FilePoller {
             }
 
             // Emit initial full sync
+            println!("[FilePoller] Polling desktop path: {:?}", desktop_path);
+            println!("[FilePoller] Initial files: {}", prev_snapshot.len());
             let full_payload = DesktopChangePayload {
                 added: prev_snapshot.clone(),
                 removed: Vec::new(),
@@ -111,6 +113,16 @@ impl AppService for FilePoller {
 
                 // Only emit if there are any changes
                 if !diff.added.is_empty() || !diff.removed.is_empty() || !diff.modified.is_empty() {
+                    if !diff.added.is_empty() {
+                        for f in &diff.added {
+                            println!("[FilePoller] Added: {}", f.name);
+                        }
+                    }
+                    if !diff.removed.is_empty() {
+                        for f in &diff.removed {
+                            println!("[FilePoller] Removed: {}", f.name);
+                        }
+                    }
                     let _ = app_handle.emit("desktop:files", &diff);
                 }
 
@@ -144,29 +156,31 @@ impl AppService for FilePoller {
 
 // ── Helpers ──
 
+/// 使用 Windows SHGetKnownFolderPath API 获取桌面路径
+/// 比环境变量拼接更可靠，正确处理 OneDrive 重定向/组策略等场景
 pub fn get_desktop_path() -> Result<PathBuf, String> {
-    // Try %USERPROFILE%\Desktop first
-    if let Ok(profile) = std::env::var("USERPROFILE") {
-        let path = PathBuf::from(&profile).join("Desktop");
-        if path.exists() {
-            return Ok(path);
+    use windows::core::GUID;
+    use windows::Win32::UI::Shell::SHGetKnownFolderPath;
+    use windows::Win32::UI::Shell::KNOWN_FOLDER_FLAG;
+
+    // FOLDERID_Desktop = {B4BFCC3A-DB2C-424C-B029-7FE99A87C641}
+    const FOLDERID_DESKTOP: GUID = GUID::from_u128(0xB4BFCC3A_DB2C_424C_B029_7FE99A87C641);
+
+    unsafe {
+        let path_ptr = SHGetKnownFolderPath(&FOLDERID_DESKTOP, KNOWN_FOLDER_FLAG(0), None)
+            .map_err(|e| format!("SHGetKnownFolderPath failed: {e}"))?;
+
+        let path_str = path_ptr.to_string().map_err(|_| "Failed to convert desktop path to string".to_string())?;
+        let path = PathBuf::from(&path_str);
+
+        // 释放 SHGetKnownFolderPath 分配的内存
+        let _ = windows::Win32::System::Com::CoTaskMemFree(Some(path_ptr.as_ptr() as _));
+
+        if !path.exists() {
+            return Err(format!("Desktop path does not exist: {:?}", path));
         }
+        Ok(path)
     }
-    // Fallback: %PUBLIC%\Desktop
-    if let Ok(public) = std::env::var("PUBLIC") {
-        let path = PathBuf::from(&public).join("Desktop");
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-    // Fallback: SystemDrive\Users\Default\Desktop
-    if let Ok(system_drive) = std::env::var("SystemDrive") {
-        let path = PathBuf::from(&system_drive).join("Users/Default/Desktop");
-        if path.exists() {
-            return Ok(path);
-        }
-    }
-    Err("Could not find desktop directory".to_string())
 }
 
 fn read_desktop_files(desktop_path: &PathBuf) -> Result<Vec<FileEntry>, String> {

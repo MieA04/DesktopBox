@@ -207,7 +207,7 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 let tray_handle = app.handle().clone();
                 // 创建右键菜单（开机自启动 + 关闭DesktopBox）
-                let autostart_item = match CheckMenuItem::with_id(app.handle(), "autostart", "开机自启动", true, is_autostart_enabled(), None::<&str>) {
+                let autostart_item: tauri::menu::CheckMenuItem<tauri::Wry> = match CheckMenuItem::with_id(app.handle(), "autostart", "开机自启动", true, is_autostart_enabled(), None::<&str>) {
                     Ok(item) => item,
                     Err(e) => {
                         eprintln!("[DesktopBox] Failed to create autostart menu item: {e}");

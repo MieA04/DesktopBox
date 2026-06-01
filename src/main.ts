@@ -158,10 +158,12 @@ async function main() {
   }
 
   // Step 2b: Load and register shortcuts [REQ-SYS-008]
+  // 默认快捷键 (Ctrl+Alt+T/B) 已在 Rust 层直接注册，确保核心功能可靠。
+  // 前端 invoke 同时调用 register_shortcuts 是为未来自定义快捷键 UI 预留入口。
   try {
     await loadAndRegisterShortcuts();
   } catch (err) {
-    console.error('[DesktopBox] Failed to register shortcuts:', err);
+    console.debug('[DesktopBox] Custom shortcut registration deferred (defaults in Rust):', err);
   }
 
   // Listen for Ctrl+Shift+F → toggle only icon-box visibility [REQ-SYS-007]

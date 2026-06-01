@@ -558,10 +558,12 @@ export class IconBox extends ModuleBase {
     img.alt = file.name;
     img.draggable = false;
 
-    // File name label
+    // File name label — strip extension for display (desktop-style, hide .lnk/.url etc.)
     const label = document.createElement('span');
     label.className = 'icon-name';
-    label.textContent = file.name;
+    label.textContent = file.extension
+      ? file.name.slice(0, -(file.extension.length + 1))
+      : file.name;
 
     item.appendChild(img);
     item.appendChild(label);

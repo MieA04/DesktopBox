@@ -102,6 +102,33 @@ pub fn run() {
                 },
             );
 
+            // ── 默认快捷键：Ctrl+Alt+T → 打开 Windows Terminal [REQ-SYS-008] ──
+            let _ = app.global_shortcut().on_shortcut(
+                Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyT),
+                move |_app, _shortcut, event: ShortcutEvent| {
+                    if !matches!(event.state, ShortcutState::Pressed) { return; }
+                    println!("[DesktopBox] Shortcut Ctrl+Alt+T triggered: launching Windows Terminal");
+                    if let Err(e) = std::process::Command::new("wt.exe").spawn() {
+                        eprintln!("[DesktopBox] Failed to launch Windows Terminal: {e}");
+                    }
+                },
+            );
+
+            // ── 默认快捷键：Ctrl+Alt+B → 打开默认浏览器 [REQ-SYS-008] ──
+            let _ = app.global_shortcut().on_shortcut(
+                Shortcut::new(Some(Modifiers::CONTROL | Modifiers::ALT), Code::KeyB),
+                move |_app, _shortcut, event: ShortcutEvent| {
+                    if !matches!(event.state, ShortcutState::Pressed) { return; }
+                    println!("[DesktopBox] Shortcut Ctrl+Alt+B triggered: launching default browser");
+                    if let Err(e) = std::process::Command::new("cmd")
+                        .args(["/c", "start", "", "https://www.google.com"])
+                        .spawn()
+                    {
+                        eprintln!("[DesktopBox] Failed to launch browser: {e}");
+                    }
+                },
+            );
+
             // ── 系统托盘：窗口隐藏后可通过托盘图标唤出 ──
             // 由于 skip_taskbar: true，必须提供系统托盘入口
             if let Some(icon) = app.default_window_icon() {

@@ -9,10 +9,6 @@ import { DEFAULT } from './utils/constants';
 import { api, ShortcutBinding } from './utils/tauriApi';
 import { persistence, STORAGE_KEYS } from './core/Persistence';
 
-/**
- * Toggle counter for debugging shortcut event delivery
- */
-let toggleCount = 0;
 let overlayInterval: ReturnType<typeof setInterval> | null = null;
 
 /**
@@ -58,8 +54,7 @@ function createDevOverlay(): void {
     overlay.innerHTML = `
       [DesktopBox Dev Overlay]
       Modules: ${moduleCount} | ${moduleStates || 'none'}
-      Shortcut: Ctrl+Shift+D (hide/show app) | Triggered: ${toggleCount}x
-      Mode: DEV
+      Shortcut: Ctrl+Shift+D (hide/show app) | Mode: DEV
     `;
   };
 
@@ -82,7 +77,7 @@ export function destroyDevOverlay(): void {
 
 const DEFAULT_SHORTCUTS: ShortcutBinding[] = [
   { id: 'terminal', keys: 'c+a+t', command: 'wt.exe', args: [], label: 'Windows Terminal' },
-  { id: 'browser', keys: 'c+a+b', command: 'cmd', args: ['/c', 'start', ''], label: 'Default Browser' },
+  { id: 'browser', keys: 'c+a+b', command: 'cmd', args: ['/c', 'start', '', 'https://www.google.com'], label: 'Default Browser' },
 ];
 
 async function loadAndRegisterShortcuts(): Promise<void> {
@@ -118,13 +113,6 @@ async function main() {
   } catch (err) {
     console.error('[DesktopBox] Failed to register shortcuts:', err);
   }
-
-  // Step 3: Listen for Ctrl+Shift+D → toggle module visibility [REQ-SYS-003]
-  await listen<void>('app:toggle-modules', () => {
-    toggleCount++;
-    console.log(`[DesktopBox] Toggle modules visibility (event #${toggleCount})`);
-    moduleManager.toggleModules();
-  });
 
   // Listen for Ctrl+Shift+F → toggle only icon-box visibility [REQ-SYS-007]
   await listen<void>('app:toggle-icon-box', () => {

@@ -154,7 +154,6 @@ pub fn run() {
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
-            commands::window::toggle_modules_visibility,
             commands::window::get_window_downgrade,
             commands::window::set_window_downgrade,
             commands::desktop::open_file,

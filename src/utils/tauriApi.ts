@@ -58,7 +58,6 @@ export interface ShellExitPayload {
 
 export const api = {
   // Window control [REQ-SYS]
-  toggleModulesVisibility: () => invoke<void>('toggle_modules_visibility'),
   getWindowDowngrade: () => invoke<boolean>('get_window_downgrade'),
   setWindowDowngrade: (downgrade: boolean) => invoke<void>('set_window_downgrade', { downgrade }),
 

@@ -92,7 +92,57 @@ async function loadAndRegisterShortcuts(): Promise<void> {
   }
 }
 
+/**
+ * 禁用 WebView2 内置浏览器功能（Ctrl+F/F12等）。
+ * 桌面应用不需要浏览器快捷键，这些快捷键会干扰用户体验。
+ * F12 同时通过 tauri.conf.json 'devtools: false' 禁用。
+ */
+function disableBrowserFeatures(): void {
+  // 禁用右键上下文菜单
+  document.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  // 拦截并阻止浏览器级别的键盘快捷键
+  document.addEventListener('keydown', (e) => {
+    // 允许终端模块处理键盘输入（xterm.js 接管了终端容器的键盘事件）
+    // 只拦截文档层级的浏览器快捷键
+    const key = e.key.toLowerCase();
+
+    // 浏览器功能快捷键列表——这些快捷键在桌面应用中无意义
+    const isBrowserShortcut =
+      // F12 / Ctrl+Shift+I / Ctrl+Shift+J / Ctrl+Shift+C → 开发者工具
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && ['i', 'j', 'c'].includes(key)) ||
+      // Ctrl+F → 页内查找
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'f') ||
+      // Ctrl+H → 历史记录
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'h') ||
+      // Ctrl+J → 下载
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'j') ||
+      // Ctrl+U → 查看源代码
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'u') ||
+      // Ctrl+S → 保存页面
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 's') ||
+      // Ctrl+P → 打印
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'p') ||
+      // Ctrl+N → 新建窗口
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'n') ||
+      // Ctrl+W → 关闭标签（避免误关应用）
+      (e.ctrlKey && !e.shiftKey && !e.altKey && key === 'w') ||
+      // F5 / Ctrl+R / Ctrl+Shift+R → 刷新
+      e.key === 'F5' ||
+      (e.ctrlKey && !e.altKey && key === 'r');
+
+    if (isBrowserShortcut) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+  });
+}
+
 async function main() {
+  // Step 0: 禁用浏览器功能
+  disableBrowserFeatures();
+
   // Step 1: Register modules
   moduleManager.register(IconBoxDescriptor);
   moduleManager.register(MonitorPanelDescriptor);

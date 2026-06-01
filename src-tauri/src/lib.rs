@@ -161,14 +161,28 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 let tray_handle = app.handle().clone();
                 // 创建右键菜单（关闭DesktopBox）
-                let quit_item = PredefinedMenuItem::quit(app.handle(), Some("关闭DesktopBox"))?;
-                let menu = Menu::with_items(app.handle(), &[&quit_item])?;
+                let quit_item = match PredefinedMenuItem::quit(app.handle(), Some("关闭DesktopBox")) {
+                    Ok(item) => item,
+                    Err(e) => {
+                        eprintln!("[DesktopBox] Failed to create quit menu item: {e}");
+                        return Ok(());
+                    }
+                };
+                let menu = match Menu::with_items(app.handle(), &[&quit_item]) {
+                    Ok(m) => m,
+                    Err(e) => {
+                        eprintln!("[DesktopBox] Failed to create tray menu: {e}");
+                        return Ok(());
+                    }
+                };
                 if let Err(e) = TrayIconBuilder::new()
                     .icon(icon.clone())
                     .tooltip("DesktopBox")
                     .menu(&menu)
-                    .on_menu_event(move |app, _event| {
-                        app.exit(0);
+                    .on_menu_event(move |handle, event| {
+                        if event.id() == quit_item.id() {
+                            handle.exit(0);
+                        }
                     })
                     .on_tray_icon_event(move |_tray, event| {
                         // 仅响应鼠标左键点击释放事件

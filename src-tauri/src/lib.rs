@@ -5,7 +5,9 @@ mod types;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
+use tauri::menu::{Menu, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
+use tauri::window::{Color, Effect, EffectsBuilder};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::commands::shortcut::ShortcutRegistry;
@@ -52,6 +54,15 @@ pub fn run() {
                 // Z-序：窗口钉在底部（桌面之上，所有应用之下）
                 if let Err(e) = window.set_always_on_bottom(true) {
                     eprintln!("[DesktopBox] Warn: failed to set always_on_bottom: {e}");
+                }
+                // 消除 DWM 残留边框：设置窗口背景效果，让 DWM 正确合成透明窗口
+                if let Err(e) = window.set_effects(
+                    EffectsBuilder::new()
+                        .effect(Effect::Blur)
+                        .color(Color(30, 30, 35, 153))  // rgba(30,30,35,0.6) 匹配 CSS 透明度
+                        .build(),
+                ) {
+                    eprintln!("[DesktopBox] Warn: failed to set window effects: {e}");
                 }
                 // 不在任务栏显示
                 if let Err(e) = window.set_skip_taskbar(true) {
@@ -155,9 +166,16 @@ pub fn run() {
             // 由于 skip_taskbar: true，必须提供系统托盘入口
             if let Some(icon) = app.default_window_icon() {
                 let tray_handle = app.handle().clone();
+                // 创建右键菜单（关闭DesktopBox）
+                let quit_item = PredefinedMenuItem::quit(app.handle(), Some("关闭DesktopBox"))?;
+                let menu = Menu::with_items(app.handle(), &[&quit_item])?;
                 if let Err(e) = TrayIconBuilder::new()
                     .icon(icon.clone())
                     .tooltip("DesktopBox")
+                    .menu(&menu)
+                    .on_menu_event(move |app, _event| {
+                        app.exit(0);
+                    })
                     .on_tray_icon_event(move |_tray, event| {
                         // 仅响应鼠标左键点击释放事件
                         if let TrayIconEvent::Click {

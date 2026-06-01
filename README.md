@@ -144,7 +144,6 @@ desktopBox/
 │           ├── file_poller.rs    # 文件轮询
 │           ├── shell_manager.rs  # Shell 会话管理
 │           └── system_monitor.rs # 系统数据采集
-├── CLAUDE.md                     # AI 开发守则
 └── README.md                     # 项目说明
 ```
 

@@ -6,8 +6,6 @@ import { MonitorPanelDescriptor } from './modules/MonitorPanel';
 import { ProcessTableDescriptor } from './modules/ProcessTable';
 import { TerminalDescriptor } from './modules/Terminal';
 import { DEFAULT } from './utils/constants';
-import { api, ShortcutBinding } from './utils/tauriApi';
-import { persistence, STORAGE_KEYS } from './core/Persistence';
 
 let overlayInterval: ReturnType<typeof setInterval> | null = null;
 
@@ -73,24 +71,9 @@ export function destroyDevOverlay(): void {
   if (overlay) overlay.remove();
 }
 
-// ── M4.5: 默认快捷键绑定 [REQ-SYS-008] ──
-
-const DEFAULT_SHORTCUTS: ShortcutBinding[] = [
-  { id: 'terminal', keys: 'c+a+t', command: 'wt.exe', args: [], label: 'Windows Terminal' },
-  { id: 'browser', keys: 'c+a+b', command: 'cmd', args: ['/c', 'start', '', 'https://www.google.com'], label: 'Default Browser' },
-];
-
-async function loadAndRegisterShortcuts(): Promise<void> {
-  const shortcuts = await persistence.load<ShortcutBinding[]>(STORAGE_KEYS.SHORTCUTS);
-  if (shortcuts && shortcuts.length > 0) {
-    await api.registerShortcuts(shortcuts);
-    console.log('[DesktopBox] Loaded and registered', shortcuts.length, 'shortcuts from storage');
-  } else {
-    await persistence.save(STORAGE_KEYS.SHORTCUTS, DEFAULT_SHORTCUTS);
-    await api.registerShortcuts(DEFAULT_SHORTCUTS);
-    console.log('[DesktopBox] Registered', DEFAULT_SHORTCUTS.length, 'default shortcuts');
-  }
-}
+// ── M4.5: 默认快捷键绑定 — 在 Rust lib.rs 中注册 ──
+// 前端不再调用 register_shortcuts invoke，避免与 Rust 层注册冲突。
+// 快捷键注册的统一入口在 src-tauri/src/lib.rs setup() 中。
 
 /**
  * 禁用 WebView2 内置浏览器功能（Ctrl+F/F12等）。
@@ -157,14 +140,8 @@ async function main() {
     console.error('Failed to initialize modules:', err);
   }
 
-  // Step 2b: Load and register shortcuts [REQ-SYS-008]
-  // 默认快捷键 (Ctrl+Alt+T/B) 已在 Rust 层直接注册，确保核心功能可靠。
-  // 前端 invoke 同时调用 register_shortcuts 是为未来自定义快捷键 UI 预留入口。
-  try {
-    await loadAndRegisterShortcuts();
-  } catch (err) {
-    console.debug('[DesktopBox] Custom shortcut registration deferred (defaults in Rust):', err);
-  }
+  // Step 2b: 快捷键注册 — 在 Rust lib.rs::setup() 中完成
+  // 前端不再调用 register_shortcuts，避免与 Rust 层注册冲突导致快捷键不生效
 
   // Listen for Ctrl+Shift+F → toggle only icon-box visibility [REQ-SYS-007]
   await listen<void>('app:toggle-icon-box', () => {

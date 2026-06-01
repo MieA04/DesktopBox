@@ -5,9 +5,11 @@ mod types;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
-use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
+use tauri::menu::{CheckMenuItem, Menu, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
+use winreg::enums::*;
+use winreg::RegKey;
 
 use crate::commands::shortcut::ShortcutRegistry;
 use crate::services::file_poller::FilePoller;
@@ -43,8 +45,6 @@ fn toggle_app_visibility(app: &tauri::AppHandle) {
 // ── 开机自启动（通过 Windows 注册表） ──
 /// 查询当前是否已注册开机自启动
 fn is_autostart_enabled() -> bool {
-    use winreg::enums::*;
-    use winreg::RegKey;
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     match hkcu.open_subkey_with_flags(
         r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -57,8 +57,6 @@ fn is_autostart_enabled() -> bool {
 
 /// 设置或取消开机自启动
 fn set_autostart(enabled: bool) {
-    use winreg::enums::*;
-    use winreg::RegKey;
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let run = match hkcu.open_subkey_with_flags(
         r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -209,8 +207,7 @@ pub fn run() {
             if let Some(icon) = app.default_window_icon() {
                 let tray_handle = app.handle().clone();
                 // 创建右键菜单（开机自启动 + 关闭DesktopBox）
-                let autostart_label = if is_autostart_enabled() { "✓ 开机自启动" } else { "  开机自启动" };
-                let autostart_item = match MenuItem::with_id(app.handle(), "autostart", autostart_label, true, None::<&str>) {
+                let autostart_item = match CheckMenuItem::with_id(app.handle(), "autostart", "开机自启动", true, is_autostart_enabled(), None::<&str>) {
                     Ok(item) => item,
                     Err(e) => {
                         eprintln!("[DesktopBox] Failed to create autostart menu item: {e}");
@@ -244,10 +241,17 @@ pub fn run() {
                     .menu(&menu)
                     .on_menu_event(move |handle, event| {
                         if event.id() == autostart_item.id() {
-                            let new_state = !is_autostart_enabled();
+                            let new_state = match autostart_item.is_checked() {
+                                Ok(v) => !v,
+                                Err(e) => {
+                                    eprintln!("[DesktopBox] Failed to get autostart menu state: {e}");
+                                    return;
+                                }
+                            };
                             set_autostart(new_state);
-                            let label = if new_state { "✓ 开机自启动" } else { "  开机自启动" };
-                            let _ = autostart_item.set_text(label);
+                            if let Err(e) = autostart_item.set_checked(new_state) {
+                                eprintln!("[DesktopBox] Failed to set autostart menu state: {e}");
+                            }
                         } else if event.id() == quit_item.id() {
                             handle.exit(0);
                         }

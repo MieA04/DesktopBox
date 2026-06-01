@@ -55,8 +55,8 @@ fn is_autostart_enabled() -> bool {
     }
 }
 
-/// 设置或取消开机自启动
-fn set_autostart(enabled: bool) {
+/// 设置或取消开机自启动，返回是否成功
+fn set_autostart(enabled: bool) -> bool {
     let hkcu = RegKey::predef(HKEY_CURRENT_USER);
     let run = match hkcu.open_subkey_with_flags(
         r"Software\Microsoft\Windows\CurrentVersion\Run",
@@ -65,7 +65,7 @@ fn set_autostart(enabled: bool) {
         Ok(key) => key,
         Err(e) => {
             eprintln!("[DesktopBox] Failed to open Run key: {e}");
-            return;
+            return false;
         }
     };
     if enabled {
@@ -73,17 +73,20 @@ fn set_autostart(enabled: bool) {
             Ok(p) => p.to_string_lossy().to_string(),
             Err(e) => {
                 eprintln!("[DesktopBox] Failed to get exe path: {e}");
-                return;
+                return false;
             }
         };
         if let Err(e) = run.set_value("DesktopBox", &exe_path) {
             eprintln!("[DesktopBox] Failed to set autostart: {e}");
+            return false;
         }
     } else {
         if let Err(e) = run.delete_value("DesktopBox") {
             eprintln!("[DesktopBox] Failed to remove autostart: {e}");
+            return false;
         }
     }
+    true
 }
 
 pub fn run() {
@@ -241,16 +244,11 @@ pub fn run() {
                     .menu(&menu)
                     .on_menu_event(move |handle, event| {
                         if event.id() == autostart_item.id() {
-                            let new_state = match autostart_item.is_checked() {
-                                Ok(v) => !v,
-                                Err(e) => {
-                                    eprintln!("[DesktopBox] Failed to get autostart menu state: {e}");
-                                    return;
+                            let new_state = !is_autostart_enabled();
+                            if set_autostart(new_state) {
+                                if let Err(e) = autostart_item.set_checked(new_state) {
+                                    eprintln!("[DesktopBox] Failed to set autostart menu state: {e}");
                                 }
-                            };
-                            set_autostart(new_state);
-                            if let Err(e) = autostart_item.set_checked(new_state) {
-                                eprintln!("[DesktopBox] Failed to set autostart menu state: {e}");
                             }
                         } else if event.id() == quit_item.id() {
                             handle.exit(0);

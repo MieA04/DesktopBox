@@ -139,7 +139,7 @@ export class ModuleManager {
 
   // ── Module visibility control [REQ-SYS-003] ──
 
-  /** Restore modules hidden by the global (D) state machine */
+  /** Restore modules hidden by the global (D) state machine (apply snapshot) */
   private _restoreGlobal(): void {
     if (!this.isGlobalHidden) return;
     this.instances.forEach((module, id) => {
@@ -150,7 +150,7 @@ export class ModuleManager {
     this.isGlobalHidden = false;
   }
 
-  /** Restore modules hidden by the others (H) state machine */
+  /** Restore modules hidden by the others (H) state machine (apply snapshot) */
   private _restoreOthers(): void {
     if (!this.othersHidden) return;
     this.instances.forEach((module, id) => {
@@ -160,6 +160,18 @@ export class ModuleManager {
     });
     this.preOthersVisibility.clear();
     this.othersHidden = false;
+  }
+
+  /** Reset the H state machine without applying its (potentially stale) snapshot */
+  private _resetOthers(): void {
+    this.preOthersVisibility.clear();
+    this.othersHidden = false;
+  }
+
+  /** Reset the D state machine without applying its (potentially stale) snapshot */
+  private _resetGlobal(): void {
+    this.preGlobalHideVisibility.clear();
+    this.isGlobalHidden = false;
   }
 
   /** Toggle visibility of all modules, or specific modules by ID */
@@ -189,15 +201,15 @@ export class ModuleManager {
       });
       this.isGlobalHidden = true;
     } else {
-      // 按快照恢复每个模块的显示状态（IconBox 保持其被 Ctrl+Shift+F 独立隐藏的状态）
+      // 按快照恢复每个模块的显示状态
       this.instances.forEach((module, id) => {
         const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
         if (wasVisible) module.show();
       });
       this.preGlobalHideVisibility.clear();
       this.isGlobalHidden = false;
-      // 同时重置 H 状态机，避免两个状态机互相污染
-      this._restoreOthers();
+      // 只重置 H 标志（不清 H 快照，也不应用它），避免互相污染
+      this._resetOthers();
     }
   }
 
@@ -225,8 +237,8 @@ export class ModuleManager {
       });
       this.preOthersVisibility.clear();
       this.othersHidden = false;
-      // 同时重置 D 状态机，避免两个状态机互相污染
-      this._restoreGlobal();
+      // 只重置 D 标志（不清 D 快照，也不应用它），避免互相污染
+      this._resetGlobal();
     }
   }
 

@@ -148,6 +148,11 @@ async function main() {
     moduleManager.toggleModules(['icon-box']);
   });
 
+  // M4.6: Listen for Ctrl+Shift+H → toggle all modules except icon-box [REQ-SYS-009]
+  await listen<void>('app:toggle-others', () => {
+    moduleManager.toggleModulesExcept(['icon-box']);
+  });
+
   // Step 4: Create debug overlay in dev mode [REQ-DEV-001]
   if (import.meta.env.DEV) {
     createDevOverlay();

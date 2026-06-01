@@ -21,6 +21,10 @@ export class ModuleManager {
   private isGlobalHidden = false;
   private preGlobalHideVisibility: Map<string, boolean> = new Map();
 
+  // M4.6: 独立于全局显隐的「隐藏其他模块」状态机（Ctrl+Shift+H）
+  private othersHidden = false;
+  private preOthersVisibility: Map<string, boolean> = new Map();
+
   private debouncedSaveLayout = debounce(async () => {
     await this.saveLayout();
   }, 500);
@@ -169,6 +173,33 @@ export class ModuleManager {
       });
       this.preGlobalHideVisibility.clear();
       this.isGlobalHidden = false;
+    }
+  }
+
+  // ── M4.6: Toggle all modules except specified (Ctrl+Shift+H) [REQ-SYS-009] ──
+
+  /** Toggle visibility of all modules except those in excludeIds */
+  toggleModulesExcept(excludeIds: string[]): void {
+    if (!this.othersHidden) {
+      // Save visibility snapshot for non-excluded modules, then hide them
+      this.preOthersVisibility.clear();
+      this.instances.forEach((module, id) => {
+        if (excludeIds.includes(id)) return;
+        this.preOthersVisibility.set(id, module.getState().visible);
+        module.hide();
+      });
+      this.othersHidden = true;
+    } else {
+      // Restore visibility for previously-visible modules
+      this.instances.forEach((module, id) => {
+        if (!this.preOthersVisibility.has(id)) return;
+        const wasVisible = this.preOthersVisibility.get(id) ?? true;
+        if (wasVisible) {
+          module.show();
+        }
+      });
+      this.preOthersVisibility.clear();
+      this.othersHidden = false;
     }
   }
 

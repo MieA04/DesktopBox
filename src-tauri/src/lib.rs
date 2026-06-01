@@ -102,6 +102,19 @@ pub fn run() {
                 },
             );
 
+            // ── 全局快捷键：Ctrl+Shift+H → 隐藏除图标盒外的所有模块 [REQ-SYS-009] ──
+            let handle_sys009 = app.handle().clone();
+            let _ = app.global_shortcut().on_shortcut(
+                Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyH),
+                move |_app, _shortcut, event: ShortcutEvent| {
+                    if !matches!(event.state, ShortcutState::Pressed) { return; }
+                    println!("[DesktopBox] Global shortcut Ctrl+Shift+H triggered");
+                    if let Some(window) = handle_sys009.get_webview_window("main") {
+                        let _ = window.emit("app:toggle-others", ());
+                    }
+                },
+            );
+
             // ── 默认快捷键：Ctrl+Alt+T → 打开 Windows Terminal [REQ-SYS-008] ──
             // 使用 cmd /c start 方式，通过 Windows Shell 可靠启动（App Execution Alias 兼容性更佳）
             match app.global_shortcut().on_shortcut(

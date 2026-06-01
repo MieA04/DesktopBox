@@ -29,3 +29,4 @@ windows = { version = "0.58", features = [
 ] }
 image = { version = "0.25", default-features = false, features = ["png"] }
 base64 = "0.22"
+winreg = "0.52"

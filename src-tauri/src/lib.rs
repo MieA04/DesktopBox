@@ -5,7 +5,7 @@ mod types;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
-use tauri::menu::{Menu, PredefinedMenuItem};
+use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
@@ -36,6 +36,54 @@ fn toggle_app_visibility(app: &tauri::AppHandle) {
             Err(e) => {
                 eprintln!("[DesktopBox] Failed to query window visibility: {e}");
             }
+        }
+    }
+}
+
+// ── 开机自启动（通过 Windows 注册表） ──
+/// 查询当前是否已注册开机自启动
+fn is_autostart_enabled() -> bool {
+    use winreg::enums::*;
+    use winreg::RegKey;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    match hkcu.open_subkey_with_flags(
+        r"Software\Microsoft\Windows\CurrentVersion\Run",
+        KEY_QUERY_VALUE,
+    ) {
+        Ok(key) => key.get_value::<String, _>("DesktopBox").is_ok(),
+        Err(_) => false,
+    }
+}
+
+/// 设置或取消开机自启动
+fn set_autostart(enabled: bool) {
+    use winreg::enums::*;
+    use winreg::RegKey;
+    let hkcu = RegKey::predef(HKEY_CURRENT_USER);
+    let run = match hkcu.open_subkey_with_flags(
+        r"Software\Microsoft\Windows\CurrentVersion\Run",
+        KEY_SET_VALUE,
+    ) {
+        Ok(key) => key,
+        Err(e) => {
+            eprintln!("[DesktopBox] Failed to open Run key: {e}");
+            return;
+        }
+    };
+    if enabled {
+        let exe_path = match std::env::current_exe() {
+            Ok(p) => p.to_string_lossy().to_string(),
+            Err(e) => {
+                eprintln!("[DesktopBox] Failed to get exe path: {e}");
+                return;
+            }
+        };
+        if let Err(e) = run.set_value("DesktopBox", &exe_path) {
+            eprintln!("[DesktopBox] Failed to set autostart: {e}");
+        }
+    } else {
+        if let Err(e) = run.delete_value("DesktopBox") {
+            eprintln!("[DesktopBox] Failed to remove autostart: {e}");
         }
     }
 }
@@ -160,7 +208,22 @@ pub fn run() {
             // 由于 skip_taskbar: true，必须提供系统托盘入口
             if let Some(icon) = app.default_window_icon() {
                 let tray_handle = app.handle().clone();
-                // 创建右键菜单（关闭DesktopBox）
+                // 创建右键菜单（开机自启动 + 关闭DesktopBox）
+                let autostart_label = if is_autostart_enabled() { "✓ 开机自启动" } else { "  开机自启动" };
+                let autostart_item = match MenuItem::with_id(app.handle(), "autostart", autostart_label, true, None::<&str>) {
+                    Ok(item) => item,
+                    Err(e) => {
+                        eprintln!("[DesktopBox] Failed to create autostart menu item: {e}");
+                        return Ok(());
+                    }
+                };
+                let separator = match PredefinedMenuItem::separator(app.handle()) {
+                    Ok(item) => item,
+                    Err(e) => {
+                        eprintln!("[DesktopBox] Failed to create separator: {e}");
+                        return Ok(());
+                    }
+                };
                 let quit_item = match PredefinedMenuItem::quit(app.handle(), Some("关闭DesktopBox")) {
                     Ok(item) => item,
                     Err(e) => {
@@ -168,7 +231,7 @@ pub fn run() {
                         return Ok(());
                     }
                 };
-                let menu = match Menu::with_items(app.handle(), &[&quit_item]) {
+                let menu = match Menu::with_items(app.handle(), &[&autostart_item, &separator, &quit_item]) {
                     Ok(m) => m,
                     Err(e) => {
                         eprintln!("[DesktopBox] Failed to create tray menu: {e}");
@@ -180,7 +243,12 @@ pub fn run() {
                     .tooltip("DesktopBox")
                     .menu(&menu)
                     .on_menu_event(move |handle, event| {
-                        if event.id() == quit_item.id() {
+                        if event.id() == autostart_item.id() {
+                            let new_state = !is_autostart_enabled();
+                            set_autostart(new_state);
+                            let label = if new_state { "✓ 开机自启动" } else { "  开机自启动" };
+                            let _ = autostart_item.set_text(label);
+                        } else if event.id() == quit_item.id() {
                             handle.exit(0);
                         }
                     })

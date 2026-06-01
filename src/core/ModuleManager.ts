@@ -17,13 +17,9 @@ export class ModuleManager {
   private instances: Map<string, ModuleBase> = new Map();
   private container: HTMLElement | null = null;
 
-  // Task 5: 全局显隐状态机，区分 Ctrl+Shift+D（全隐藏/恢复）和 Ctrl+Shift+F（独立切换）
-  private isGlobalHidden = false;
-  private preGlobalHideVisibility: Map<string, boolean> = new Map();
-
-  // M4.6: 独立于全局显隐的「隐藏其他模块」状态机（Ctrl+Shift+H）
-  private othersHidden = false;
-  private preOthersVisibility: Map<string, boolean> = new Map();
+  // 引用计数方案：hideCounts > 0 表示模块被外部隐藏，baseVisibility 记录基线可见性
+  private hideCounts: Map<string, number> = new Map();
+  private baseVisibility: Map<string, boolean> = new Map();
 
   private debouncedSaveLayout = debounce(async () => {
     await this.saveLayout();
@@ -139,117 +135,50 @@ export class ModuleManager {
 
   // ── Module visibility control [REQ-SYS-003] ──
 
-  /** Restore modules hidden by the global (D) state machine (apply snapshot) */
-  private _restoreGlobal(): void {
-    if (!this.isGlobalHidden) return;
-    this.instances.forEach((module, id) => {
-      const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
-      if (wasVisible) module.show();
-    });
-    this.preGlobalHideVisibility.clear();
-    this.isGlobalHidden = false;
-  }
+  /**
+   * 根据计数器和基线可见性，将模块的 DOM 可见性与期望状态对齐。
+   * 不依赖边界检查，而是绝对状态再同步。
+   */
+  private syncVisibility(module: ModuleBase): void {
+    const id = module.id;
+    const count = this.hideCounts.get(id) ?? 0;
+    const base = this.baseVisibility.get(id) ?? true;
 
-  /** Restore modules hidden by the others (H) state machine (apply snapshot) */
-  private _restoreOthers(): void {
-    if (!this.othersHidden) return;
-    this.instances.forEach((module, id) => {
-      if (!this.preOthersVisibility.has(id)) return;
-      const wasVisible = this.preOthersVisibility.get(id) ?? true;
-      if (wasVisible) module.show();
-    });
-    this.preOthersVisibility.clear();
-    this.othersHidden = false;
-  }
-
-  /** Reset the H state machine without applying its (potentially stale) snapshot */
-  private _resetOthers(): void {
-    this.preOthersVisibility.clear();
-    this.othersHidden = false;
-  }
-
-  /** Reset the D state machine without applying its (potentially stale) snapshot */
-  private _resetGlobal(): void {
-    this.preGlobalHideVisibility.clear();
-    this.isGlobalHidden = false;
-  }
-
-  /** Toggle visibility of all modules, or specific modules by ID */
-  toggleModules(ids?: string[]): void {
-    if (ids && ids.length > 0) {
-      // Ctrl+Shift+F 路径：独立切换指定模块
-      const targetModules = ids.map(id => this.instances.get(id)).filter(Boolean) as ModuleBase[];
-      targetModules.forEach(module => {
-        if (module.getState().visible) {
-          module.hide();
-        } else {
-          module.show();
-        }
-      });
-      return;
-    }
-
-    // Ctrl+Shift+D 路径：全局显隐状态机
-    if (!this.isGlobalHidden) {
-      // 如果 H 状态机处于激活态，先恢复，确保快照记录真实可见性
-      if (this.othersHidden) this._restoreOthers();
-      // 快照当前所有模块可见性，然后全部隐藏
-      this.preGlobalHideVisibility.clear();
-      this.instances.forEach((module, id) => {
-        this.preGlobalHideVisibility.set(id, module.getState().visible);
+    if (count === 0) {
+      if (base && !module.getState().visible) {
+        module.show();
+      } else if (!base && module.getState().visible) {
         module.hide();
-      });
-      this.isGlobalHidden = true;
+      }
     } else {
-      // 按快照恢复每个模块的显示状态
-      this.instances.forEach((module, id) => {
-        const wasVisible = this.preGlobalHideVisibility.get(id) ?? true;
-        if (wasVisible) module.show();
-      });
-      this.preGlobalHideVisibility.clear();
-      this.isGlobalHidden = false;
-      // 只重置 H 标志（不清 H 快照，也不应用它），避免互相污染
-      this._resetOthers();
+      if (module.getState().visible) {
+        module.hide();
+      }
     }
+  }
+
+  /** Toggle visibility of specified modules (Ctrl+Shift+F: independent, bypasses counter) */
+  toggleModules(ids: string[]): void {
+    const targetModules = ids.map(id => this.instances.get(id)).filter(Boolean) as ModuleBase[];
+    targetModules.forEach(module => {
+      if (module.getState().visible) {
+        module.hide();
+      } else {
+        module.show();
+      }
+    });
   }
 
   // ── M4.6: Toggle all modules except specified (Ctrl+Shift+H) [REQ-SYS-009] ──
 
   /** Toggle visibility of all modules except those in excludeIds */
   toggleModulesExcept(excludeIds: string[]): void {
-    if (!this.othersHidden) {
-      // 如果 D 状态机处于激活态，先恢复，确保快照记录真实可见性
-      if (this.isGlobalHidden) this._restoreGlobal();
-      // Save visibility snapshot for non-excluded modules, then hide them
-      this.preOthersVisibility.clear();
-      this.instances.forEach((module, id) => {
-        if (excludeIds.includes(id)) return;
-        this.preOthersVisibility.set(id, module.getState().visible);
-        module.hide();
-      });
-      this.othersHidden = true;
-    } else {
-      // Restore visibility for previously-visible modules
-      this.instances.forEach((module, id) => {
-        if (!this.preOthersVisibility.has(id)) return;
-        const wasVisible = this.preOthersVisibility.get(id) ?? true;
-        if (wasVisible) module.show();
-      });
-      this.preOthersVisibility.clear();
-      this.othersHidden = false;
-      // 只重置 D 标志（不清 D 快照，也不应用它），避免互相污染
-      this._resetGlobal();
-    }
-  }
-
-  /** Show a specific module by ID */
-  showModule(id: string): void {
-    this.instances.get(id)?.show();
-  }
-
-  /** Hide a specific module by ID */
-  hideModule(id: string): void {
-    this.instances.get(id)?.hide();
+    this.instances.forEach((module, id) => {
+      if (excludeIds.includes(id)) return;
+      const cur = this.hideCounts.get(id) ?? 0;
+      this.hideCounts.set(id, cur > 0 ? 0 : cur + 1);
+      this.syncVisibility(module);
+    });
   }
 
   /** Query whether a module is currently visible */
@@ -284,9 +213,13 @@ export class ModuleManager {
       if (!saved.visible) instance.hide(); else instance.show();
     });
 
-    // Task 5: 同步 isGlobalHidden 状态——如果所有模块都是隐藏的，标记全局隐藏
-    const allHidden = Array.from(this.instances.values()).every(m => !m.getState().visible);
-    this.isGlobalHidden = allHidden;
+    // 重新加载布局后重置引用计数器（快捷键触发状态不可跨会话保持）
+    this.hideCounts.clear();
+    this.baseVisibility.clear();
+    this.instances.forEach((module, id) => {
+      this.hideCounts.set(id, 0);
+      this.baseVisibility.set(id, module.getState().visible);
+    });
   }
 }
 

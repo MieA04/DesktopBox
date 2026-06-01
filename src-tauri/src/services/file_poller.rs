@@ -100,6 +100,10 @@ impl AppService for FilePoller {
                         continue;
                     }
                 };
+                // Trace specific known file
+                if !current_files.iter().any(|f| f.name.contains("NB")) {
+                    eprintln!("[FilePoller] NB启动器 NOT in snapshot! ({} files)", current_files.len());
+                }
                 let current_modified = match get_all_modified_times() {
                     Ok(m) => m,
                     Err(e) => {
@@ -195,11 +199,11 @@ fn known_folder_path(folder_guid: u128) -> Result<PathBuf, String> {
 /// 读取个人桌面和公共桌面的文件，合并去重后返回
 /// 同名文件以个人桌面为准（优先级更高）
 pub fn read_all_desktop_files() -> Result<Vec<FileEntry>, String> {
-    let mut files = read_desktop_files(&get_desktop_path()?)?;
+    let mut files = read_desktop_files(&get_desktop_path()?, "Personal")?;
 
     // 合并公共桌面文件（个人文件优先）
     if let Ok(public_path) = get_common_desktop_path() {
-        if let Ok(public_files) = read_desktop_files(&public_path) {
+        if let Ok(public_files) = read_desktop_files(&public_path, "Public") {
             for pf in public_files {
                 if !files.iter().any(|f| f.name == pf.name) {
                     files.push(pf);
@@ -212,12 +216,20 @@ pub fn read_all_desktop_files() -> Result<Vec<FileEntry>, String> {
     Ok(files)
 }
 
-fn read_desktop_files(desktop_path: &PathBuf) -> Result<Vec<FileEntry>, String> {
+fn read_desktop_files(desktop_path: &PathBuf, source_label: &str) -> Result<Vec<FileEntry>, String> {
     let mut files = Vec::new();
+    let mut skipped = 0u32;
     for entry in std::fs::read_dir(desktop_path)
-        .map_err(|e| format!("Failed to read desktop: {e}"))?
+        .map_err(|e| format!("Failed to read desktop ({source_label}): {e}"))?
     {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
+        let entry = match entry {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("[FilePoller] Skipping entry in {source_label}: {e}");
+                skipped += 1;
+                continue;
+            }
+        };
         let path = entry.path();
         let name = path
             .file_name()
@@ -242,6 +254,10 @@ fn read_desktop_files(desktop_path: &PathBuf) -> Result<Vec<FileEntry>, String> 
     }
     // Sort by name for consistent ordering
     files.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
+    eprintln!("[FilePoller] {source_label}: {} files read, {} skipped", files.len(), skipped);
+    if skipped > 0 {
+        eprintln!("[FilePoller]   WARNING: {skipped} entries were skipped in {source_label}");
+    }
     Ok(files)
 }
 
@@ -250,7 +266,10 @@ fn get_modified_times(desktop_path: &PathBuf) -> Result<HashMap<String, SystemTi
     for entry in std::fs::read_dir(desktop_path)
         .map_err(|e| format!("Failed to read desktop for modified times: {e}"))?
     {
-        let entry = entry.map_err(|e| format!("Failed to read entry: {e}"))?;
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
         let path = entry.path();
         let name = path
             .file_name()

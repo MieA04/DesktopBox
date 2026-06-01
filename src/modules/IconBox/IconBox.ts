@@ -490,9 +490,14 @@ export class IconBox extends ModuleBase {
   private async loadInitialFiles(): Promise<void> {
     try {
       const files = await api.getDesktopFiles();
-      console.log(`[IconBox] Initial load: ${files.length} files via get_desktop_files`);
-      if (files.length > 0) {
-        console.log(`[IconBox]   first: ${files[0].name} @ ${files[0].path}`);
+      console.log(`[IconBox] Initial load: ${files.length} files`);
+      // Trace NB启动器
+      const nbFile = files.find(f => f.name.includes('NB') || f.name.includes('启动器'));
+      if (nbFile) {
+        console.log(`[IconBox] FOUND NB启动器:`, nbFile);
+      } else {
+        console.warn('[IconBox] NB启动器 NOT FOUND in get_desktop_files response!');
+        console.log(`[IconBox] First 10 files:`, files.slice(0, 10).map(f => f.name));
       }
       this.renderFullList(files);
       // M2b-#4: Apply saved icon order after initial load

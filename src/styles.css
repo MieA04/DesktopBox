@@ -2,7 +2,7 @@
 :root {
   --blur-strength: 20px;
   --bg-opacity: 0.6;
-  --bg-rgb: 240, 240, 245;
+  --bg-rgb: 30, 30, 35;
   /* --module-radius and --titlebar-height removed in M5 */
 }
 

@@ -37,10 +37,12 @@
   background: transparent;
 }
 
-.icon-item img {
+.icon-item img,
+.icon-img {
   width: var(--icon-display-size, 64px);
   height: var(--icon-display-size, 64px);
   pointer-events: none;
+  background: transparent;
 }
 
 /* M2b-#2: Insertion indicator during drag-reorder */

@@ -58,7 +58,7 @@ function createDevOverlay(): void {
     overlay.innerHTML = `
       [DesktopBox Dev Overlay]
       Modules: ${moduleCount} | ${moduleStates || 'none'}
-      Shortcut: Ctrl+Shift+D (event-driven) | Triggered: ${toggleCount}x
+      Shortcut: Ctrl+Shift+D (hide/show app) | Triggered: ${toggleCount}x
       Mode: DEV
     `;
   };
@@ -81,19 +81,15 @@ export function destroyDevOverlay(): void {
 // ── M4.5: 默认快捷键绑定 [REQ-SYS-008] ──
 
 const DEFAULT_SHORTCUTS: ShortcutBinding[] = [
-  { id: 'terminal', keys: 'w+r', command: 'wt.exe', args: [], label: 'Windows Terminal' },
+  { id: 'terminal', keys: 'c+a+t', command: 'wt.exe', args: [], label: 'Windows Terminal' },
+  { id: 'browser', keys: 'c+a+b', command: 'cmd', args: ['/c', 'start', ''], label: 'Default Browser' },
 ];
 
 async function loadAndRegisterShortcuts(): Promise<void> {
   const shortcuts = await persistence.load<ShortcutBinding[]>(STORAGE_KEYS.SHORTCUTS);
   if (shortcuts && shortcuts.length > 0) {
-    // 过滤掉已废弃的 browser 快捷键，防止持久化残留
-    const filtered = shortcuts.filter(s => s.id !== 'browser');
-    if (filtered.length !== shortcuts.length) {
-      await persistence.save(STORAGE_KEYS.SHORTCUTS, filtered);
-    }
-    await api.registerShortcuts(filtered);
-    console.log('[DesktopBox] Loaded and registered', filtered.length, 'shortcuts from storage');
+    await api.registerShortcuts(shortcuts);
+    console.log('[DesktopBox] Loaded and registered', shortcuts.length, 'shortcuts from storage');
   } else {
     await persistence.save(STORAGE_KEYS.SHORTCUTS, DEFAULT_SHORTCUTS);
     await api.registerShortcuts(DEFAULT_SHORTCUTS);

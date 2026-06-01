@@ -5,6 +5,7 @@ mod types;
 use std::sync::Mutex;
 use std::time::Duration;
 use tauri::{Emitter, Manager, PhysicalSize, PhysicalPosition};
+use tauri::tray::{TrayIconBuilder, TrayIconEvent};
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutEvent, ShortcutState};
 
 use crate::commands::shortcut::ShortcutRegistry;
@@ -12,6 +13,31 @@ use crate::services::file_poller::FilePoller;
 use crate::services::shell_manager::ShellManager;
 use crate::services::system_monitor::SystemMonitor;
 use crate::services::AppService;
+
+/// 切换主窗口的显示/隐藏状态。
+/// 用于全局快捷键和系统托盘点击的统一回调。
+fn toggle_app_visibility(app: &tauri::AppHandle) {
+    if let Some(window) = app.get_webview_window("main") {
+        match window.is_visible() {
+            Ok(true) => {
+                if let Err(e) = window.hide() {
+                    eprintln!("[DesktopBox] Failed to hide window: {e}");
+                }
+            }
+            Ok(false) => {
+                if let Err(e) = window.show() {
+                    eprintln!("[DesktopBox] Failed to show window: {e}");
+                }
+                if let Err(e) = window.set_focus() {
+                    eprintln!("[DesktopBox] Failed to focus window: {e}");
+                }
+            }
+            Err(e) => {
+                eprintln!("[DesktopBox] Failed to query window visibility: {e}");
+            }
+        }
+    }
+}
 
 pub fn run() {
     tauri::Builder::default()
@@ -48,20 +74,18 @@ pub fn run() {
             // 桌面图标与任务栏由用户在 Windows 系统设置中手动管理
             // 启动时不再自动隐藏（REQ-SYS-001/002 已降级为 P3）
 
-            // 全局快捷键：Ctrl+Shift+D 切换模块显隐 [REQ-SYS-003]
-            // on_shortcut 内部已包含注册逻辑，无需单独调用 register()
+            // 全局快捷键：Ctrl+Shift+D 隐藏/唤出整个应用窗口 [REQ-SYS-003]
+            // 窗口配置 skip_taskbar: true，隐藏后需通过系统托盘唤出
             let handle = app.handle().clone();
             let _ = app.global_shortcut().on_shortcut(
                 Shortcut::new(Some(Modifiers::CONTROL | Modifiers::SHIFT), Code::KeyD),
                 move |_app, _shortcut, event: ShortcutEvent| {
-                    // 只响应按下事件，忽略释放事件（否则触发两次，模块立即重新显示）
+                    // 只响应按下事件，忽略释放事件
                     if !matches!(event.state, ShortcutState::Pressed) {
                         return;
                     }
                     println!("[DesktopBox] Global shortcut Ctrl+Shift+D triggered");
-                    if let Some(window) = handle.get_webview_window("main") {
-                        commands::window::toggle_modules_visibility(window);
-                    }
+                    toggle_app_visibility(&handle);
                 },
             );
 
@@ -77,6 +101,32 @@ pub fn run() {
                     }
                 },
             );
+
+            // ── 系统托盘：窗口隐藏后可通过托盘图标唤出 ──
+            // 由于 skip_taskbar: true，必须提供系统托盘入口
+            if let Some(icon) = app.default_window_icon() {
+                let tray_handle = app.handle().clone();
+                if let Err(e) = TrayIconBuilder::new()
+                    .icon(icon.clone())
+                    .tooltip("DesktopBox")
+                    .on_tray_icon_event(move |_tray, event| {
+                        // 仅响应鼠标左键点击释放事件
+                        if let TrayIconEvent::Click {
+                            button: tauri::tray::MouseButton::Left,
+                            button_state: tauri::tray::MouseButtonState::Up,
+                            ..
+                        } = event
+                        {
+                            toggle_app_visibility(&tray_handle);
+                        }
+                    })
+                    .build(app.handle())
+                {
+                    eprintln!("[DesktopBox] Failed to build tray icon: {e}");
+                }
+            } else {
+                eprintln!("[DesktopBox] No default window icon found, skipping tray icon");
+            }
 
             // ── FilePoller: 实时监听桌面文件变化 ──
             // 通过 app.manage() 托管，应用退出时自动 Drop → 停止轮询线程
